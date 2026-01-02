@@ -1,15 +1,39 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface HeaderProps {
   user?: { email?: string; name?: string } | null
 }
 
+interface NavLinkProps {
+  href: string
+  children: React.ReactNode
+  isActive: boolean
+}
+
+function NavLink({ href, children, isActive }: NavLinkProps) {
+  return (
+    <Link
+      href={href}
+      className={`
+        px-3 py-2 rounded-md font-medium transition-all duration-200
+        ${isActive
+          ? 'bg-[var(--primary-50)] text-[var(--primary-600)] font-semibold'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        }
+      `}
+    >
+      {children}
+    </Link>
+  )
+}
+
 export function Header({ user }: HeaderProps) {
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleSignOut = async () => {
     try {
@@ -22,6 +46,13 @@ export function Header({ user }: HeaderProps) {
     }
   }
 
+  const isActive = (path: string) => {
+    if (path === '/jobs') {
+      return pathname === '/jobs' || pathname?.startsWith('/jobs/')
+    }
+    return pathname === path || pathname?.startsWith(`${path}/`)
+  }
+
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -32,31 +63,19 @@ export function Header({ user }: HeaderProps) {
             </Link>
 
             {user && (
-              <nav className="hidden md:flex items-center gap-6">
-                <Link
-                  href="/jobs"
-                  className="text-gray-600 hover:text-gray-900 font-medium"
-                >
+              <nav className="hidden md:flex items-center gap-2">
+                <NavLink href="/jobs" isActive={isActive('/jobs')}>
                   Jobs
-                </Link>
-                <Link
-                  href="/import"
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
+                </NavLink>
+                <NavLink href="/import" isActive={isActive('/import')}>
                   Find Jobs
-                </Link>
-                <Link
-                  href="/saved"
-                  className="text-gray-600 hover:text-gray-900 font-medium"
-                >
+                </NavLink>
+                <NavLink href="/saved" isActive={isActive('/saved')}>
                   Saved
-                </Link>
-                <Link
-                  href="/preferences"
-                  className="text-gray-600 hover:text-gray-900 font-medium"
-                >
+                </NavLink>
+                <NavLink href="/preferences" isActive={isActive('/preferences')}>
                   Preferences
-                </Link>
+                </NavLink>
               </nav>
             )}
           </div>
@@ -69,7 +88,7 @@ export function Header({ user }: HeaderProps) {
                 </span>
                 <button
                   onClick={handleSignOut}
-                  className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+                  className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
                 >
                   Sign out
                 </button>
@@ -78,13 +97,13 @@ export function Header({ user }: HeaderProps) {
               <>
                 <Link
                   href="/login"
-                  className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+                  className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/signup"
-                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors duration-200"
                 >
                   Get Started
                 </Link>

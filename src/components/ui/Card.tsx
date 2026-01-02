@@ -3,31 +3,38 @@ import { cn } from '@/lib/utils'
 interface CardProps {
   children: React.ReactNode
   className?: string
+  hover?: boolean
 }
 
-export function Card({ children, className }: CardProps) {
+export function Card({ children, className, hover = false }: CardProps) {
   return (
-    <div className={cn('bg-white rounded-lg border border-gray-200 shadow-sm', className)}>
+    <div
+      className={cn(
+        'bg-[var(--bg-card)] rounded-xl border border-[var(--border-default)] shadow-sm transition-all duration-200',
+        hover && 'hover:border-[var(--primary-600)] hover:shadow-md hover:-translate-y-0.5',
+        className
+      )}
+    >
       {children}
     </div>
   )
 }
 
-export function CardHeader({ children, className }: CardProps) {
+export function CardHeader({ children, className }: Omit<CardProps, 'hover'>) {
   return (
-    <div className={cn('px-4 py-3 border-b border-gray-200', className)}>
+    <div className={cn('px-5 py-4 border-b border-[var(--border-default)]', className)}>
       {children}
     </div>
   )
 }
 
-export function CardContent({ children, className }: CardProps) {
-  return <div className={cn('px-4 py-4', className)}>{children}</div>
+export function CardContent({ children, className }: Omit<CardProps, 'hover'>) {
+  return <div className={cn('px-5 py-4', className)}>{children}</div>
 }
 
-export function CardFooter({ children, className }: CardProps) {
+export function CardFooter({ children, className }: Omit<CardProps, 'hover'>) {
   return (
-    <div className={cn('px-4 py-3 border-t border-gray-200 bg-gray-50 rounded-b-lg', className)}>
+    <div className={cn('px-5 py-3 border-t border-[var(--border-default)] bg-gray-50 rounded-b-xl', className)}>
       {children}
     </div>
   )

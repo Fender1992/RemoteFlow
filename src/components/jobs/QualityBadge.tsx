@@ -31,12 +31,19 @@ function QualityBadge({
 }: QualityBadgeProps) {
   const badges: React.ReactNode[] = []
 
+  // Base badge styles with new design system
+  const baseBadgeStyles = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold'
+
   // Positive badges
   if (isWithinDays(posted_date, 7)) {
     badges.push(
       <span
         key="fresh"
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700"
+        className={baseBadgeStyles}
+        style={{
+          backgroundColor: 'var(--health-good-bg)',
+          color: 'var(--health-good-text)',
+        }}
       >
         Fresh
       </span>
@@ -47,7 +54,11 @@ function QualityBadge({
     badges.push(
       <span
         key="verified"
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"
+        className={baseBadgeStyles}
+        style={{
+          backgroundColor: '#dbeafe',
+          color: '#1e40af',
+        }}
       >
         <svg
           className="w-3 h-3"
@@ -70,7 +81,11 @@ function QualityBadge({
     badges.push(
       <span
         key="high-quality"
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700"
+        className={baseBadgeStyles}
+        style={{
+          backgroundColor: 'var(--health-good-bg)',
+          color: 'var(--health-good-text)',
+        }}
       >
         High Quality
       </span>
@@ -82,7 +97,11 @@ function QualityBadge({
     badges.push(
       <span
         key="open-90"
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700"
+        className={baseBadgeStyles}
+        style={{
+          backgroundColor: 'var(--health-caution-bg)',
+          color: 'var(--health-caution-text)',
+        }}
       >
         Open 90+ days
       </span>
@@ -93,7 +112,11 @@ function QualityBadge({
     badges.push(
       <span
         key="reposted"
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700"
+        className={baseBadgeStyles}
+        style={{
+          backgroundColor: 'var(--health-caution-bg)',
+          color: 'var(--health-caution-text)',
+        }}
       >
         Reposted multiple times
       </span>
@@ -104,7 +127,11 @@ function QualityBadge({
     badges.push(
       <span
         key="suspicious"
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700"
+        className={baseBadgeStyles}
+        style={{
+          backgroundColor: 'var(--health-danger-bg)',
+          color: 'var(--health-danger-text)',
+        }}
       >
         Suspicious
       </span>

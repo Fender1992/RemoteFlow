@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { JobList } from '@/components/jobs/JobList'
 import { JobFilters } from '@/components/jobs/JobFilters'
 import { JobSearch } from '@/components/jobs/JobSearch'
+import { JobCardSkeletonList } from '@/components/jobs/JobCardSkeleton'
 import { Button } from '@/components/ui/Button'
 import type { Job } from '@/types'
 
@@ -84,9 +85,9 @@ function JobsClientInner({
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Remote Jobs</h1>
-        <p className="text-gray-600">
-          {totalJobs.toLocaleString()} jobs available
+        <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Remote Jobs</h1>
+        <p className="text-[var(--text-secondary)]">
+          <span className="font-semibold text-[var(--primary-600)]">{totalJobs.toLocaleString()}</span> jobs with AI-powered ghost detection
         </p>
       </div>
 
@@ -116,7 +117,7 @@ function JobsClientInner({
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-center gap-2">
+            <div className="mt-6 flex items-center justify-center gap-3">
               <Button
                 variant="secondary"
                 size="sm"
@@ -125,8 +126,8 @@ function JobsClientInner({
               >
                 Previous
               </Button>
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
+              <span className="text-sm text-[var(--text-secondary)] px-3 py-1 bg-gray-50 rounded-md">
+                Page <span className="font-medium text-[var(--text-primary)]">{currentPage}</span> of {totalPages}
               </span>
               <Button
                 variant="secondary"
@@ -146,7 +147,26 @@ function JobsClientInner({
 
 export function JobsClient(props: JobsClientProps) {
   return (
-    <Suspense fallback={<div className="text-center py-12">Loading jobs...</div>}>
+    <Suspense fallback={
+      <div>
+        <div className="mb-6">
+          <div className="h-8 w-48 rounded skeleton mb-2" />
+          <div className="h-5 w-64 rounded skeleton" />
+        </div>
+        <div className="flex flex-col lg:flex-row gap-6">
+          <aside className="lg:w-64 flex-shrink-0">
+            <div className="p-4 bg-white rounded-lg border space-y-4">
+              <div className="h-6 w-32 rounded skeleton" />
+              <div className="h-10 w-full rounded skeleton" />
+              <div className="h-10 w-full rounded skeleton" />
+            </div>
+          </aside>
+          <div className="flex-1">
+            <JobCardSkeletonList count={5} />
+          </div>
+        </div>
+      </div>
+    }>
       <JobsClientInner {...props} />
     </Suspense>
   )

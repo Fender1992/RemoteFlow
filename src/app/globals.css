@@ -1,15 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  /* Base colors */
+  --background: #f8fafc;
   --foreground: #171717;
+
+  /* Primary palette */
+  --primary-50: #eef2ff;
+  --primary-100: #e0e7ff;
+  --primary-600: #4f46e5;
+  --primary-700: #4338ca;
+
+  /* Semantic - Job Health */
+  --health-good: #10b981;
+  --health-good-bg: #d1fae5;
+  --health-good-text: #065f46;
+  --health-caution: #f59e0b;
+  --health-caution-bg: #fef3c7;
+  --health-caution-text: #92400e;
+  --health-danger: #ef4444;
+  --health-danger-bg: #fee2e2;
+  --health-danger-text: #991b1b;
+
+  /* Text hierarchy */
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+
+  /* Borders */
+  --border-default: #e5e7eb;
+  --border-focus: #4f46e5;
+
+  /* Card */
+  --bg-card: #ffffff;
+  --bg-card-hover: #f9fafb;
 }
 
 @theme inline {
+  /* Base */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Primary */
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+
+  /* Health semantic colors */
+  --color-health-good: var(--health-good);
+  --color-health-good-bg: var(--health-good-bg);
+  --color-health-good-text: var(--health-good-text);
+  --color-health-caution: var(--health-caution);
+  --color-health-caution-bg: var(--health-caution-bg);
+  --color-health-caution-text: var(--health-caution-text);
+  --color-health-danger: var(--health-danger);
+  --color-health-danger-bg: var(--health-danger-bg);
+  --color-health-danger-text: var(--health-danger-text);
+
+  /* Text */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
+  /* Borders & Cards */
+  --color-border-default: var(--border-default);
+  --color-border-focus: var(--border-focus);
+  --color-bg-card: var(--bg-card);
+  --color-bg-card-hover: var(--bg-card-hover);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +83,68 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Animation keyframes */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Utility classes for animations */
+.animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.2s ease-out;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Skeleton loader shimmer effect */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
