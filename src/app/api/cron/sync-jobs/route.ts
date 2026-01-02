@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { fetchAllRemotiveJobs } from '@/lib/ingestion/remotive'
 import { normalizeRemotiveJobs } from '@/lib/ingestion/normalize'
+import { fetchAllJobicyJobs, normalizeJobicyJobs } from '@/lib/ingestion/jobicy'
 import { dedupeAndUpsertJobs, markStaleJobsInactive } from '@/lib/ingestion/dedupe'
 
 export const dynamic = 'force-dynamic'
@@ -19,52 +20,69 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const supabase = createServiceClient()
 
-  try {
-    // Get source info for Remotive
-    const { data: source, error: sourceError } = await supabase
-      .from('job_sources')
-      .select('id, name')
-      .eq('name', 'remotive')
-      .single()
+  const stats = {
+    remotive: { fetched: 0, processed: 0, errors: 0 },
+    jobicy: { fetched: 0, processed: 0, errors: 0 },
+    staleMarked: 0,
+    durationMs: 0,
+  }
 
-    if (sourceError || !source) {
-      throw new Error('Remotive source not found in database')
+  try {
+    // Sync Remotive
+    console.log('Fetching jobs from Remotive...')
+    try {
+      const remotiveJobs = await fetchAllRemotiveJobs()
+      stats.remotive.fetched = remotiveJobs.length
+      console.log(`Fetched ${remotiveJobs.length} jobs from Remotive`)
+
+      const normalizedRemotive = normalizeRemotiveJobs(remotiveJobs)
+      const remotiveResult = await dedupeAndUpsertJobs(supabase, normalizedRemotive)
+      stats.remotive.processed = remotiveResult.inserted
+      stats.remotive.errors = remotiveResult.errors
+
+      await supabase
+        .from('job_sources')
+        .update({ last_synced: new Date().toISOString() })
+        .eq('name', 'remotive')
+    } catch (err) {
+      console.error('Remotive sync failed:', err)
     }
 
-    // Fetch jobs from Remotive
-    console.log('Fetching jobs from Remotive...')
-    const remotiveJobs = await fetchAllRemotiveJobs()
-    console.log(`Fetched ${remotiveJobs.length} jobs from Remotive`)
+    // Sync Jobicy
+    console.log('Fetching jobs from Jobicy...')
+    try {
+      const jobicyJobs = await fetchAllJobicyJobs()
+      stats.jobicy.fetched = jobicyJobs.length
+      console.log(`Fetched ${jobicyJobs.length} jobs from Jobicy`)
 
-    // Normalize jobs to our schema
-    const normalizedJobs = normalizeRemotiveJobs(remotiveJobs)
-    console.log(`Normalized ${normalizedJobs.length} jobs`)
+      const normalizedJobicy = normalizeJobicyJobs(jobicyJobs)
+      const jobicyResult = await dedupeAndUpsertJobs(supabase, normalizedJobicy)
+      stats.jobicy.processed = jobicyResult.inserted
+      stats.jobicy.errors = jobicyResult.errors
 
-    // Upsert jobs (deduplicate by URL)
-    const { inserted, errors } = await dedupeAndUpsertJobs(supabase, normalizedJobs)
-    console.log(`Upserted: ${inserted}, Errors: ${errors}`)
+      // Ensure jobicy source exists
+      await supabase
+        .from('job_sources')
+        .upsert({
+          name: 'jobicy',
+          api_endpoint: 'https://jobicy.com/api/v2/remote-jobs',
+          is_active: true,
+          last_synced: new Date().toISOString(),
+        }, { onConflict: 'name' })
+    } catch (err) {
+      console.error('Jobicy sync failed:', err)
+    }
 
-    // Mark old jobs as inactive (not fetched in last 7 days)
-    const staleCount = await markStaleJobsInactive(supabase, 'remotive', 7)
-    console.log(`Marked ${staleCount} stale jobs as inactive`)
+    // Mark stale jobs
+    const staleRemotive = await markStaleJobsInactive(supabase, 'remotive', 7)
+    const staleJobicy = await markStaleJobsInactive(supabase, 'jobicy', 7)
+    stats.staleMarked = staleRemotive + staleJobicy
 
-    // Update last_synced timestamp
-    await supabase
-      .from('job_sources')
-      .update({ last_synced: new Date().toISOString() })
-      .eq('id', source.id)
-
-    const duration = Date.now() - startTime
+    stats.durationMs = Date.now() - startTime
 
     return NextResponse.json({
       success: true,
-      stats: {
-        fetched: remotiveJobs.length,
-        processed: inserted,
-        errors,
-        staleMarked: staleCount,
-        durationMs: duration,
-      },
+      stats,
     })
   } catch (error) {
     console.error('Sync error:', error)

@@ -24,6 +24,9 @@ export interface Job {
   is_active: boolean
 }
 
+// Type for inserting new jobs (without auto-generated fields)
+export type JobInsert = Omit<Job, 'id' | 'created_at' | 'fetched_at'>
+
 export interface SavedJob {
   id: string
   user_id: string
