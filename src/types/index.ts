@@ -223,3 +223,108 @@ export interface CompanyWithReputation {
   reputation: CompanyReputation
   active_jobs_count?: number
 }
+
+// ============================================================================
+// One-Click Import System Types
+// ============================================================================
+
+export type ImportSiteId = 'linkedin' | 'indeed' | 'glassdoor' | 'dice' | 'wellfound'
+export type ImportSessionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+export type ImportSiteStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+
+// Extended user preferences with search settings
+export interface UserPreferencesExtended extends UserPreferences {
+  // Search preferences for one-click import
+  search_roles?: string[]                    // ["React Developer", "Frontend Engineer"]
+  location_preference?: 'remote' | 'hybrid' | 'onsite' | 'any'
+  preferred_cities?: string[]                // ["San Francisco", "New York"]
+  salary_range?: {
+    min: number
+    max: number
+    currency: string
+  }
+  enabled_sites?: ImportSiteId[]             // ["linkedin", "indeed", "glassdoor"]
+}
+
+// Import session (master record per user import request)
+export interface ImportSession {
+  id: string
+  user_id: string
+  status: ImportSessionStatus
+  search_params: ImportSearchParams
+  total_jobs_found: number
+  total_jobs_imported: number
+  total_duplicates_skipped: number
+  started_at: string | null
+  completed_at: string | null
+  error_message: string | null
+  created_at: string
+  site_results?: ImportSiteResult[]
+}
+
+// Search parameters stored with each import session
+export interface ImportSearchParams {
+  roles: string[]
+  location: 'remote' | 'hybrid' | 'onsite' | 'any'
+  cities: string[]
+  salary?: {
+    min: number
+    max: number
+    currency: string
+  }
+  sites: ImportSiteId[]
+}
+
+// Per-site results within an import session
+export interface ImportSiteResult {
+  id: string
+  session_id: string
+  site_id: ImportSiteId
+  status: ImportSiteStatus
+  jobs_found: number
+  jobs_imported: number
+  duplicates_skipped: number
+  pages_scraped: number
+  search_url: string | null
+  error_message: string | null
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+}
+
+// Rate limiting info
+export interface ImportRateLimits {
+  user_id: string
+  hourly_count: number
+  daily_count: number
+  hourly_reset_at: string
+  daily_reset_at: string
+  updated_at: string
+}
+
+// API response types for import
+export interface ImportSessionResponse {
+  session_id: string
+  status: ImportSessionStatus
+  message: string
+}
+
+export interface ImportProgressResponse {
+  id: string
+  status: ImportSessionStatus
+  search_params: ImportSearchParams
+  progress: {
+    total_jobs_found: number
+    total_jobs_imported: number
+    duplicates_skipped: number
+  }
+  sites: Array<{
+    site_id: ImportSiteId
+    status: ImportSiteStatus
+    jobs_found: number
+    jobs_imported: number
+    error?: string
+  }>
+  started_at: string | null
+  completed_at: string | null
+}
