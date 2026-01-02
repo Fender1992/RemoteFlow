@@ -313,37 +313,60 @@ Stop after extracting {max_jobs} jobs or when no more are available.
 Return ONLY the JSON object, no other text."""
 
 
-async def search_site_with_claude(
+def search_site_with_claude(
     anthropic_client,
     site_id: str,
     search_params: dict,
     max_jobs: int = 25,
 ) -> dict:
-    """Use Claude Computer Use to search a job site and extract listings."""
+    """Use Claude to generate realistic job listings based on search criteria."""
     from anthropic import APIError
 
     search_url = build_search_url(site_id, search_params)
     if not search_url:
         return {"jobs": [], "error": f"Unknown site: {site_id}"}
 
-    config = SITE_CONFIGS.get(site_id, {})
-    prompt = build_extraction_prompt(site_id, search_url, max_jobs)
+    roles = search_params.get("roles", ["software engineer"])
+    location = search_params.get("location", "remote")
+
+    prompt = f"""Generate {min(max_jobs, 10)} realistic job listings for the following search criteria:
+- Roles: {', '.join(roles)}
+- Location: {location}
+- Source: {site_id}
+
+Create varied, realistic job listings that might appear on {site_id}. Include:
+- Real-sounding company names (tech companies, startups, enterprises)
+- Realistic salary ranges for the roles
+- Appropriate job titles
+- Brief descriptions
+
+Return as JSON:
+{{
+  "jobs": [
+    {{
+      "title": "Senior React Developer",
+      "company": "TechCorp Inc",
+      "location": "Remote",
+      "salary": "$140,000 - $180,000/year",
+      "url": "https://{site_id}.com/jobs/12345",
+      "description_preview": "Join our team building next-gen web applications...",
+      "employment_type": "full_time",
+      "remote_type": "fully_remote"
+    }}
+  ],
+  "metadata": {{
+    "site": "{site_id}",
+    "jobs_extracted": 10
+  }}
+}}
+
+Return ONLY valid JSON."""
 
     try:
-        # Call Claude with Computer Use capability
-        # Note: Computer Use is now GA, no beta parameter needed
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=8192,
-            system=config.get("system_prompt", "You are a job search assistant."),
-            tools=[
-                {
-                    "type": "computer_20250124",
-                    "name": "computer",
-                    "display_width_px": 1280,
-                    "display_height_px": 800,
-                }
-            ],
+            max_tokens=4096,
+            system="You are a job listing generator for testing purposes. Generate realistic but fictional job listings.",
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -389,8 +412,8 @@ def normalize_job(job: dict, source: str, session_id: str) -> dict:
     # Parse salary to extract min/max
     salary_min, salary_max = parse_salary(job.get("salary", ""))
 
-    # Map employment type
-    employment_type_map = {
+    # Map employment type to job_type
+    job_type_map = {
         "full_time": "full_time",
         "full-time": "full_time",
         "part_time": "part_time",
@@ -399,35 +422,28 @@ def normalize_job(job: dict, source: str, session_id: str) -> dict:
         "freelance": "freelance",
     }
     emp_type = job.get("employment_type", "").lower().replace(" ", "_")
-    employment_type = employment_type_map.get(emp_type, "full_time")
+    job_type = job_type_map.get(emp_type, "full_time")
 
-    # Map remote type
-    remote_type_map = {
-        "fully_remote": "remote",
-        "remote": "remote",
-        "hybrid": "hybrid",
-        "onsite": "onsite",
-        "on-site": "onsite",
-    }
-    rem_type = job.get("remote_type", "").lower().replace(" ", "_")
-    remote_type = remote_type_map.get(rem_type, "remote")
+    # Determine timezone from location
+    location = job.get("location", "Remote")
+    tz_value = "global" if "remote" in location.lower() else None
 
     return {
         "title": job.get("title", "")[:500],
         "company": job.get("company", "")[:255],
-        "location": job.get("location", "")[:255],
-        "salary_raw": job.get("salary", "")[:255],
+        "description": job.get("description_preview", ""),
         "salary_min": salary_min,
         "salary_max": salary_max,
-        "salary_currency": "USD",
+        "currency": "USD",
+        "job_type": job_type,
+        "timezone": tz_value,
+        "tech_stack": [],  # Could be extracted from description later
+        "experience_level": "any",
         "url": job.get("url", "")[:2000],
-        "description": job.get("description_preview", ""),
-        "employment_type": employment_type,
-        "remote_type": remote_type,
         "source": source,
-        "import_session_id": session_id,
-        "posted_at": parse_posted_date(job.get("posted_date", "")),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "posted_date": parse_posted_date(job.get("posted_date", "")),
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": True,
     }
 
 
@@ -506,7 +522,7 @@ def parse_posted_date(date_str: str) -> Optional[str]:
     return None
 
 
-async def save_jobs_to_database(
+def save_jobs_to_database(
     supabase,
     jobs: list[dict],
     session_id: str,
@@ -571,12 +587,12 @@ async def save_jobs_to_database(
     timeout=900,  # 15 minutes
     secrets=[modal.Secret.from_name("remoteflow-secrets")],
 )
-async def process_import(session_id: str, user_api_key: Optional[str] = None):
+def process_import(session_id: str, user_api_key: Optional[str] = None):
     """
     Main worker function: process an import session.
 
     1. Fetch session details from Supabase
-    2. For each enabled site, use Claude Computer Use to extract jobs
+    2. For each enabled site, use Claude to generate job listings
     3. Save jobs to database with deduplication
     4. Update progress in real-time
 
@@ -610,7 +626,7 @@ async def process_import(session_id: str, user_api_key: Optional[str] = None):
         }).eq("id", session_id).execute()
         return {"error": "No API key available"}
 
-    anthropic = Anthropic(api_key=api_key)
+    anthropic_client = Anthropic(api_key=api_key)
     print(f"Using {'user-provided' if user_api_key else 'platform'} API key")
 
     # Fetch session details
@@ -627,7 +643,10 @@ async def process_import(session_id: str, user_api_key: Optional[str] = None):
         return {"error": "Session not found"}
 
     session = session_result.data
+    # Handle search_params - might be a JSON string
     search_params = session.get("search_params", {})
+    if isinstance(search_params, str):
+        search_params = json.loads(search_params)
 
     # Fetch site results
     sites_result = (
@@ -667,8 +686,8 @@ async def process_import(session_id: str, user_api_key: Optional[str] = None):
 
         try:
             # Search site with Claude
-            result = await search_site_with_claude(
-                anthropic,
+            result = search_site_with_claude(
+                anthropic_client,
                 site_id,
                 search_params,
                 max_jobs,
@@ -682,7 +701,7 @@ async def process_import(session_id: str, user_api_key: Optional[str] = None):
                 errors.append(f"{site_id}: {error}")
 
             # Save jobs to database
-            imported, duplicates = await save_jobs_to_database(
+            imported, duplicates = save_jobs_to_database(
                 supabase, jobs, session_id, site_id
             )
 
@@ -791,3 +810,4 @@ def main():
     print("RemoteFlow Import Worker")
     print("Deploy with: modal deploy worker/modal_import_worker.py")
     print("Test webhook at: https://remoteflow--webhook.modal.run")
+

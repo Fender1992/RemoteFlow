@@ -22,10 +22,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // 2. Get user profile to check subscription tier and preferences
+  // 2. Get user profile to check subscription tier, preferences, and API key
   const { data: profile, error: profileError } = await supabase
     .from('users_profile')
-    .select('preferences, subscription_tier')
+    .select('preferences, subscription_tier, anthropic_api_key')
     .eq('id', user.id)
     .single()
 
@@ -34,7 +34,21 @@ export async function POST(request: NextRequest) {
   }
 
   const preferences = profile?.preferences as UserPreferencesExtended | null
-  const isPremium = profile?.subscription_tier === 'pro' || profile?.subscription_tier === 'enterprise'
+  const subscriptionTier = profile?.subscription_tier || 'free'
+  const isPremium = subscriptionTier === 'pro' || subscriptionTier === 'enterprise'
+  const isMaxTier = subscriptionTier === 'max' || subscriptionTier === 'enterprise'
+
+  // 2.5. Check if user needs their own API key (non-max tiers)
+  if (!isMaxTier && !profile?.anthropic_api_key) {
+    return NextResponse.json(
+      {
+        error: 'api_key_required',
+        message:
+          'Please add your Anthropic API key in Preferences to use job imports. Upgrade to Max tier for unlimited imports with our platform key.',
+      },
+      { status: 400 }
+    )
+  }
 
   // 3. Validate required search preferences
   if (!preferences?.search_roles?.length) {
@@ -108,7 +122,9 @@ export async function POST(request: NextRequest) {
   }
 
   // 8. Trigger external worker
-  const triggerResult = await triggerWorker(session.id)
+  // Pass user's API key for non-max tiers, null for max tier (uses platform key)
+  const userApiKey = isMaxTier ? null : profile?.anthropic_api_key
+  const triggerResult = await triggerWorker(session.id, userApiKey)
 
   if (!triggerResult.success) {
     // Update session status to indicate worker trigger failed

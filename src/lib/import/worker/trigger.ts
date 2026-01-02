@@ -16,8 +16,14 @@ export interface WorkerTriggerResult {
  *
  * In production, this would call Modal.com or Railway webhook
  * For now, it's a stub that can be connected later
+ *
+ * @param sessionId - The import session ID
+ * @param anthropicApiKey - Optional user-provided Anthropic API key (for non-max tier users)
  */
-export async function triggerWorker(sessionId: string): Promise<WorkerTriggerResult> {
+export async function triggerWorker(
+  sessionId: string,
+  anthropicApiKey?: string | null
+): Promise<WorkerTriggerResult> {
   const webhookUrl = process.env.IMPORT_WORKER_WEBHOOK_URL
 
   if (!webhookUrl) {
@@ -33,16 +39,23 @@ export async function triggerWorker(sessionId: string): Promise<WorkerTriggerRes
   }
 
   try {
+    const body: Record<string, string> = {
+      session_id: sessionId,
+      timestamp: new Date().toISOString(),
+    }
+
+    // Include user's API key if provided (for non-max tier users)
+    if (anthropicApiKey) {
+      body.anthropic_api_key = anthropicApiKey
+    }
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.IMPORT_WORKER_API_KEY || ''}`,
       },
-      body: JSON.stringify({
-        session_id: sessionId,
-        timestamp: new Date().toISOString(),
-      }),
+      body: JSON.stringify(body),
     })
 
     if (!response.ok) {
