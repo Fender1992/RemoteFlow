@@ -42,6 +42,7 @@ export function PreferencesClient({ initialPreferences }: PreferencesClientProps
   const [preferences, setPreferences] = useState<UserPreferencesExtended>(initialPreferences)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [newRole, setNewRole] = useState('')
   const [newCity, setNewCity] = useState('')
 
@@ -130,18 +131,26 @@ export function PreferencesClient({ initialPreferences }: PreferencesClientProps
 
   const handleSave = async () => {
     setSaving(true)
+    setError(null)
 
-    const res = await fetch('/api/preferences', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(preferences),
-    })
+    try {
+      const res = await fetch('/api/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preferences),
+      })
 
-    if (res.ok) {
-      setSaved(true)
+      if (res.ok) {
+        setSaved(true)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || 'Failed to save preferences')
+      }
+    } catch (err) {
+      setError('Network error. Please try again.')
+    } finally {
+      setSaving(false)
     }
-
-    setSaving(false)
   }
 
   const showCities = preferences.location_preference === 'hybrid' || preferences.location_preference === 'onsite'
@@ -406,6 +415,9 @@ export function PreferencesClient({ initialPreferences }: PreferencesClientProps
           </Button>
           {saved && (
             <span className="text-sm text-green-600">Preferences saved!</span>
+          )}
+          {error && (
+            <span className="text-sm text-red-600">{error}</span>
           )}
         </div>
       </div>

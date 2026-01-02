@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
@@ -37,7 +37,7 @@ export default function AdminPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState('pending')
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -62,11 +62,11 @@ export default function AdminPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, router])
 
   useEffect(() => {
     fetchItems()
-  }, [statusFilter])
+  }, [fetchItems])
 
   const handleAction = async (
     id: string,
@@ -118,7 +118,7 @@ export default function AdminPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
           >
             <option value="pending">Pending</option>
             <option value="reviewed">Reviewed</option>

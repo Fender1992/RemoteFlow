@@ -18,7 +18,13 @@ export function FindJobsButton({ onSessionStarted, disabled }: FindJobsButtonPro
 
     try {
       const res = await fetch('/api/import/find-jobs', { method: 'POST' })
-      const data = await res.json()
+
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error('Server error. Please try again.')
+      }
 
       if (!res.ok) {
         if (res.status === 400 && data.error === 'preferences_required') {

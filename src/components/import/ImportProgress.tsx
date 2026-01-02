@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import type { ImportProgressResponse, ImportSiteId } from '@/types'
@@ -50,6 +51,7 @@ function getStatusIcon(status: string): string {
 }
 
 export function ImportProgress({ sessionId, onComplete, onCancel }: ImportProgressProps) {
+  const router = useRouter()
   const [session, setSession] = useState<ImportProgressResponse | null>(null)
   const [polling, setPolling] = useState(true)
   const [cancelling, setCancelling] = useState(false)
@@ -227,7 +229,7 @@ export function ImportProgress({ sessionId, onComplete, onCancel }: ImportProgre
               Successfully imported {session.progress.total_jobs_imported} new jobs!
             </p>
             <Button
-              onClick={() => window.location.href = '/jobs'}
+              onClick={() => router.push('/jobs')}
             >
               View Jobs
             </Button>

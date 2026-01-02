@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FindJobsButton } from '@/components/import/FindJobsButton'
@@ -14,6 +15,7 @@ interface ImportClientProps {
 }
 
 export function ImportClient({ preferences, recentSessions }: ImportClientProps) {
+  const router = useRouter()
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
 
@@ -109,9 +111,9 @@ export function ImportClient({ preferences, recentSessions }: ImportClientProps)
                 <p className="text-gray-600">
                   You need to configure your search preferences before importing jobs.
                 </p>
-                <Link href="/preferences">
-                  <Button>Configure Preferences</Button>
-                </Link>
+                <Button onClick={() => router.push('/preferences')}>
+                  Configure Preferences
+                </Button>
               </div>
             )}
           </div>
