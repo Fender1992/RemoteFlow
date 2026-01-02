@@ -84,7 +84,18 @@ RemoteFlow is a remote job aggregation + tracking SaaS (B2C, freemium) for remot
 - [x] Job ingestion system
 - [x] API routes
 - [x] Frontend pages
-- [ ] Supabase project setup
-- [ ] Initial deployment
-- [ ] First job sync (200+ jobs)
-- [ ] End-to-end testing
+- [x] Supabase project setup (tzwvagdjmtxsxkyceqoj, us-west-2)
+- [x] Database migrations run
+- [x] First job sync (254 jobs from Remotive + Jobicy)
+- [ ] Vercel domain configuration (see note below)
+
+## Vercel Deployment Note
+The Vercel deployment builds and deploys successfully, but the production domain
+`remote-flow-xi.vercel.app` is returning 404. This is a Vercel project configuration
+issue that needs to be fixed in the Vercel dashboard:
+
+1. Go to Vercel Dashboard > Project Settings > Domains
+2. Ensure the production domain is correctly aliased to the main branch
+3. Or set up a new production domain
+
+The app works correctly locally and the API returns 254+ jobs from the database.
