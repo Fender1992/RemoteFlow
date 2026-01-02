@@ -23,6 +23,7 @@ image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "anthropic>=0.40.0",
     "supabase>=2.0.0",
     "httpx>=0.25.0",
+    "fastapi",
 )
 
 
@@ -725,7 +726,7 @@ async def process_import(session_id: str):
 
 
 @app.function(image=image, secrets=[modal.Secret.from_name("remoteflow-secrets")])
-@modal.web_endpoint(method="POST")
+@modal.fastapi_endpoint(method="POST")
 async def webhook(request: dict):
     """
     Webhook endpoint called by Next.js to start an import.
@@ -754,7 +755,7 @@ async def webhook(request: dict):
 
 
 @app.function(image=image)
-@modal.web_endpoint(method="GET")
+@modal.fastapi_endpoint(method="GET")
 async def health():
     """Health check endpoint."""
     return {"status": "ok", "service": "remoteflow-import-worker"}

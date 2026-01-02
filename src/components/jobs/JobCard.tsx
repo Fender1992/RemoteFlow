@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { formatSalary, formatDate, capitalizeFirst } from '@/lib/utils'
 import QualityBadge from '@/components/jobs/QualityBadge'
 import { ReportJobModal } from '@/components/jobs/ReportJobModal'
+import { JobChatPanel } from '@/components/jobs/JobChatPanel'
 import type { Job, GhostFlag } from '@/types'
 
 interface JobCardProps {
@@ -33,6 +34,7 @@ export function JobCard({
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(isSaved)
   const [showReportModal, setShowReportModal] = useState(false)
+  const [showChatPanel, setShowChatPanel] = useState(false)
 
   const handleSaveToggle = async () => {
     if (saving) return
@@ -164,6 +166,16 @@ export function JobCard({
               >
                 View Job
               </a>
+              <button
+                onClick={() => setShowChatPanel(true)}
+                className="flex items-center justify-center gap-1 text-sm text-gray-500 hover:text-blue-600"
+                title="Ask AI about this job"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Ask AI
+              </button>
               {showReportButton && (
                 <button
                   onClick={() => setShowReportModal(true)}
@@ -183,6 +195,13 @@ export function JobCard({
         onClose={() => setShowReportModal(false)}
         jobId={job.id}
         jobTitle={job.title}
+      />
+
+      {/* Chat Panel */}
+      <JobChatPanel
+        isOpen={showChatPanel}
+        onClose={() => setShowChatPanel(false)}
+        job={job}
       />
     </Card>
   )

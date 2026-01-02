@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import type { UserPreferencesExtended, JobType, ExperienceLevel, ImportSiteId } from '@/types'
 
 interface PreferencesClientProps {
   initialPreferences: UserPreferencesExtended
+  subscriptionTier: 'free' | 'pro' | 'enterprise' | 'max'
 }
 
 const JOB_TYPES: { value: JobType; label: string }[] = [
@@ -38,13 +39,163 @@ const IMPORT_SITES: { id: ImportSiteId; name: string }[] = [
   { id: 'wellfound', name: 'Wellfound' },
 ]
 
-export function PreferencesClient({ initialPreferences }: PreferencesClientProps) {
+export function PreferencesClient({ initialPreferences, subscriptionTier }: PreferencesClientProps) {
   const [preferences, setPreferences] = useState<UserPreferencesExtended>(initialPreferences)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [newRole, setNewRole] = useState('')
   const [newCity, setNewCity] = useState('')
+
+  // Anthropic API Key state
+  const [apiKey, setApiKey] = useState('')
+  const [maskedApiKey, setMaskedApiKey] = useState<string | null>(null)
+  const [hasApiKey, setHasApiKey] = useState(false)
+  const [apiKeyLoading, setApiKeyLoading] = useState(true)
+  const [apiKeySaving, setApiKeySaving] = useState(false)
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null)
+  const [apiKeySuccess, setApiKeySuccess] = useState(false)
+
+  // CacheGPT API Key state
+  const [cacheGptKey, setCacheGptKey] = useState('')
+  const [maskedCacheGptKey, setMaskedCacheGptKey] = useState<string | null>(null)
+  const [hasCacheGptKey, setHasCacheGptKey] = useState(false)
+  const [cacheGptKeyLoading, setCacheGptKeyLoading] = useState(true)
+  const [cacheGptKeySaving, setCacheGptKeySaving] = useState(false)
+  const [cacheGptKeyError, setCacheGptKeyError] = useState<string | null>(null)
+  const [cacheGptKeySuccess, setCacheGptKeySuccess] = useState(false)
+
+  const needsApiKey = subscriptionTier !== 'max' && subscriptionTier !== 'enterprise'
+
+  // Fetch API key status on mount
+  useEffect(() => {
+    async function fetchApiKeyStatus() {
+      try {
+        const res = await fetch('/api/user/api-key')
+        if (res.ok) {
+          const data = await res.json()
+          setHasApiKey(data.hasKey)
+          setMaskedApiKey(data.maskedKey)
+        }
+      } catch {
+        // Ignore errors
+      } finally {
+        setApiKeyLoading(false)
+      }
+    }
+    fetchApiKeyStatus()
+  }, [])
+
+  // Fetch CacheGPT API key status on mount
+  useEffect(() => {
+    async function fetchCacheGptKeyStatus() {
+      try {
+        const res = await fetch('/api/user/cachegpt-key')
+        if (res.ok) {
+          const data = await res.json()
+          setHasCacheGptKey(data.hasKey)
+          setMaskedCacheGptKey(data.maskedKey)
+        }
+      } catch {
+        // Ignore errors
+      } finally {
+        setCacheGptKeyLoading(false)
+      }
+    }
+    fetchCacheGptKeyStatus()
+  }, [])
+
+  const handleSaveApiKey = async () => {
+    if (!apiKey.trim()) return
+    setApiKeySaving(true)
+    setApiKeyError(null)
+    setApiKeySuccess(false)
+
+    try {
+      const res = await fetch('/api/user/api-key', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setHasApiKey(true)
+        setMaskedApiKey(data.maskedKey)
+        setApiKey('')
+        setApiKeySuccess(true)
+      } else {
+        setApiKeyError(data.error || 'Failed to save API key')
+      }
+    } catch {
+      setApiKeyError('Network error')
+    } finally {
+      setApiKeySaving(false)
+    }
+  }
+
+  const handleDeleteApiKey = async () => {
+    setApiKeySaving(true)
+    setApiKeyError(null)
+
+    try {
+      const res = await fetch('/api/user/api-key', { method: 'DELETE' })
+      if (res.ok) {
+        setHasApiKey(false)
+        setMaskedApiKey(null)
+        setApiKeySuccess(false)
+      }
+    } catch {
+      setApiKeyError('Failed to delete API key')
+    } finally {
+      setApiKeySaving(false)
+    }
+  }
+
+  const handleSaveCacheGptKey = async () => {
+    if (!cacheGptKey.trim()) return
+    setCacheGptKeySaving(true)
+    setCacheGptKeyError(null)
+    setCacheGptKeySuccess(false)
+
+    try {
+      const res = await fetch('/api/user/cachegpt-key', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: cacheGptKey }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setHasCacheGptKey(true)
+        setMaskedCacheGptKey(data.maskedKey)
+        setCacheGptKey('')
+        setCacheGptKeySuccess(true)
+      } else {
+        setCacheGptKeyError(data.error || 'Failed to save API key')
+      }
+    } catch {
+      setCacheGptKeyError('Network error')
+    } finally {
+      setCacheGptKeySaving(false)
+    }
+  }
+
+  const handleDeleteCacheGptKey = async () => {
+    setCacheGptKeySaving(true)
+    setCacheGptKeyError(null)
+
+    try {
+      const res = await fetch('/api/user/cachegpt-key', { method: 'DELETE' })
+      if (res.ok) {
+        setHasCacheGptKey(false)
+        setMaskedCacheGptKey(null)
+        setCacheGptKeySuccess(false)
+      }
+    } catch {
+      setCacheGptKeyError('Failed to delete API key')
+    } finally {
+      setCacheGptKeySaving(false)
+    }
+  }
 
   const handleJobTypeToggle = (type: JobType) => {
     const current = preferences.job_types || []
@@ -333,6 +484,150 @@ export function PreferencesClient({ initialPreferences }: PreferencesClientProps
                 </label>
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Anthropic API Key */}
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold text-gray-900">Anthropic API Key</h2>
+            <p className="text-sm text-gray-600">
+              {needsApiKey ? (
+                <>Required for job imports. Get your key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">console.anthropic.com</a></>
+              ) : (
+                <>You&apos;re on the {subscriptionTier} tier - platform API key included!</>
+              )}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {apiKeyLoading ? (
+              <p className="text-sm text-gray-500">Loading...</p>
+            ) : needsApiKey ? (
+              <div className="space-y-3">
+                {hasApiKey ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-600 font-mono">
+                      {maskedApiKey}
+                    </div>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={handleDeleteApiKey}
+                      disabled={apiKeySaving}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="sk-ant-api03-..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    />
+                    <Button
+                      onClick={handleSaveApiKey}
+                      disabled={apiKeySaving || !apiKey.trim()}
+                    >
+                      {apiKeySaving ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                )}
+                {apiKeyError && (
+                  <p className="text-sm text-red-600">{apiKeyError}</p>
+                )}
+                {apiKeySuccess && (
+                  <p className="text-sm text-green-600">API key saved successfully!</p>
+                )}
+                {!hasApiKey && (
+                  <p className="text-xs text-gray-500">
+                    Your API key is stored securely and only used for job imports.
+                    Upgrade to Max tier for unlimited imports with our platform key.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-600">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm">Platform API key active - no setup needed</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* CacheGPT API Key - for Job Chat */}
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold text-gray-900">CacheGPT API Key</h2>
+            <p className="text-sm text-gray-600">
+              {needsApiKey ? (
+                <>Required for job chat. Get your key from <a href="https://cachegpt.app/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">cachegpt.app</a></>
+              ) : (
+                <>You&apos;re on the {subscriptionTier} tier - platform API key included!</>
+              )}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {cacheGptKeyLoading ? (
+              <p className="text-sm text-gray-500">Loading...</p>
+            ) : needsApiKey ? (
+              <div className="space-y-3">
+                {hasCacheGptKey ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-600 font-mono">
+                      {maskedCacheGptKey}
+                    </div>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={handleDeleteCacheGptKey}
+                      disabled={cacheGptKeySaving}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={cacheGptKey}
+                      onChange={(e) => setCacheGptKey(e.target.value)}
+                      placeholder="cgpt_sk_..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    />
+                    <Button
+                      onClick={handleSaveCacheGptKey}
+                      disabled={cacheGptKeySaving || !cacheGptKey.trim()}
+                    >
+                      {cacheGptKeySaving ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                )}
+                {cacheGptKeyError && (
+                  <p className="text-sm text-red-600">{cacheGptKeyError}</p>
+                )}
+                {cacheGptKeySuccess && (
+                  <p className="text-sm text-green-600">API key saved successfully!</p>
+                )}
+                {!hasCacheGptKey && (
+                  <p className="text-xs text-gray-500">
+                    Your CacheGPT API key enables AI-powered chat about job listings.
+                    Upgrade to Max tier for unlimited access with our platform key.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-600">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm">Platform API key active - no setup needed</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

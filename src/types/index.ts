@@ -87,8 +87,11 @@ export interface UserProfile {
   id: string
   email: string | null
   name: string | null
-  subscription_tier: 'free' | 'pro' | 'enterprise'
+  subscription_tier: 'free' | 'pro' | 'enterprise' | 'max'
   preferences: UserPreferences
+  anthropic_api_key: string | null
+  cachegpt_api_key: string | null
+  cachegpt_user_id: string | null
   created_at: string
 }
 
@@ -328,3 +331,64 @@ export interface ImportProgressResponse {
   started_at: string | null
   completed_at: string | null
 }
+
+// ============================================================================
+// CacheGPT Job Chat Types
+// ============================================================================
+
+export interface JobChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+  cached?: boolean
+  responseTimeMs?: number
+}
+
+export interface JobChatContext {
+  jobId: string
+  title: string
+  company: string
+  description: string | null
+  salary_min: number | null
+  salary_max: number | null
+  currency: string
+  job_type: JobType | null
+  experience_level: ExperienceLevel
+  tech_stack: string[]
+  posted_date: string | null
+  ghost_score: number
+  ghost_flags: GhostFlag[]
+  quality_score: number
+  health_score: number
+  company_verified?: boolean
+  company_reputation?: CompanyReputation | null
+}
+
+export interface JobChatUsage {
+  dailyCount: number
+  dailyLimit: number
+  remaining: number
+  resetAt: string | null
+}
+
+export interface JobChatResponse {
+  message: string
+  cached: boolean
+  responseTimeMs: number
+  usage?: {
+    remaining: number
+    limit: number
+  }
+}
+
+export const SUGGESTED_QUESTIONS = [
+  'Is this a ghost job?',
+  "What's the company's reputation?",
+  'What are the red flags in this listing?',
+  'Is the salary competitive for this role?',
+  'What skills should I highlight in my application?',
+  'How does this compare to similar jobs?',
+] as const
+
+export type SuggestedQuestion = (typeof SUGGESTED_QUESTIONS)[number]
