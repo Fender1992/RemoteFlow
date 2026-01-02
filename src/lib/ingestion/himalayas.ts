@@ -14,11 +14,11 @@ export interface HimalayasJob {
   maxSalary?: number | null
   currency?: string
   locationRestrictions?: string[]
-  timezoneRestrictions?: string[]
+  timezoneRestrictions?: number[]
   categories: string[]
   parentCategories?: string[]
-  pubDate: string
-  expiryDate?: string
+  pubDate: number // Unix timestamp
+  expiryDate?: number
   applicationLink: string
 }
 
@@ -130,7 +130,7 @@ export function normalizeHimalayasJob(job: HimalayasJob): JobInsert {
     url: job.applicationLink,
     source: 'himalayas',
     company_logo: job.companyLogo || null,
-    posted_date: job.pubDate || null,
+    posted_date: job.pubDate ? new Date(job.pubDate * 1000).toISOString() : null,
     is_active: true,
   }
 }
