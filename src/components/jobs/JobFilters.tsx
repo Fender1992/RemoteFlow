@@ -17,12 +17,20 @@ const EXPERIENCE_LEVELS = [
   { value: 'lead', label: 'Lead' },
 ]
 
+const SORT_OPTIONS = [
+  { value: 'quality', label: 'Best Match' },
+  { value: 'date', label: 'Newest' },
+  { value: 'salary', label: 'Highest Salary' },
+]
+
 export function JobFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const currentJobTypes = searchParams.get('job_types')?.split(',').filter(Boolean) || []
   const currentExpLevels = searchParams.get('experience_levels')?.split(',').filter(Boolean) || []
+  const currentSort = searchParams.get('sort') || 'quality'
+  const hideGhosts = searchParams.get('hide_ghosts') === 'true'
 
   const updateFilters = useCallback(
     (key: string, value: string[]) => {
@@ -35,6 +43,22 @@ export function JobFilters() {
       }
 
       params.delete('page') // Reset to page 1 when filters change
+      router.push(`/jobs?${params.toString()}`)
+    },
+    [router, searchParams]
+  )
+
+  const updateSingleFilter = useCallback(
+    (key: string, value: string | boolean) => {
+      const params = new URLSearchParams(searchParams.toString())
+
+      if (value === '' || value === false) {
+        params.delete(key)
+      } else {
+        params.set(key, String(value))
+      }
+
+      params.delete('page')
       router.push(`/jobs?${params.toString()}`)
     },
     [router, searchParams]
@@ -58,7 +82,7 @@ export function JobFilters() {
     router.push('/jobs')
   }
 
-  const hasFilters = currentJobTypes.length > 0 || currentExpLevels.length > 0
+  const hasFilters = currentJobTypes.length > 0 || currentExpLevels.length > 0 || hideGhosts || currentSort !== 'quality'
 
   return (
     <div className="space-y-4 p-4 bg-white rounded-lg border border-gray-200">
@@ -72,6 +96,35 @@ export function JobFilters() {
             Clear all
           </button>
         )}
+      </div>
+
+      {/* Sort */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-700 mb-2">Sort By</h4>
+        <select
+          value={currentSort}
+          onChange={(e) => updateSingleFilter('sort', e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+        >
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Quality Filter */}
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hideGhosts}
+            onChange={(e) => updateSingleFilter('hide_ghosts', e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-sm text-gray-600">Hide suspicious jobs</span>
+        </label>
       </div>
 
       {/* Job Type */}

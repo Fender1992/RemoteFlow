@@ -14,6 +14,7 @@ export const maxDuration = 300 // 5 minutes max
 interface SourceStats {
   fetched: number
   processed: number
+  qualityCalculated: number
   errors: number
 }
 
@@ -33,11 +34,11 @@ export async function POST(request: NextRequest) {
   const supabase = createServiceClient()
 
   const stats: Record<string, SourceStats> = {
-    remotive: { fetched: 0, processed: 0, errors: 0 },
-    jobicy: { fetched: 0, processed: 0, errors: 0 },
-    remoteok: { fetched: 0, processed: 0, errors: 0 },
-    himalayas: { fetched: 0, processed: 0, errors: 0 },
-    weworkremotely: { fetched: 0, processed: 0, errors: 0 },
+    remotive: { fetched: 0, processed: 0, qualityCalculated: 0, errors: 0 },
+    jobicy: { fetched: 0, processed: 0, qualityCalculated: 0, errors: 0 },
+    remoteok: { fetched: 0, processed: 0, qualityCalculated: 0, errors: 0 },
+    himalayas: { fetched: 0, processed: 0, qualityCalculated: 0, errors: 0 },
+    weworkremotely: { fetched: 0, processed: 0, qualityCalculated: 0, errors: 0 },
   }
 
   let totalStaleMarked = 0
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
       const normalizedRemotive = normalizeRemotiveJobs(remotiveJobs)
       const remotiveResult = await dedupeAndUpsertJobs(supabase, normalizedRemotive)
       stats.remotive.processed = remotiveResult.inserted
+      stats.remotive.qualityCalculated = remotiveResult.qualityCalculated
       stats.remotive.errors = remotiveResult.errors
 
       await supabase
@@ -77,6 +79,7 @@ export async function POST(request: NextRequest) {
       const normalizedJobicy = normalizeJobicyJobs(jobicyJobs)
       const jobicyResult = await dedupeAndUpsertJobs(supabase, normalizedJobicy)
       stats.jobicy.processed = jobicyResult.inserted
+      stats.jobicy.qualityCalculated = jobicyResult.qualityCalculated
       stats.jobicy.errors = jobicyResult.errors
 
       await supabase
@@ -102,6 +105,7 @@ export async function POST(request: NextRequest) {
       const normalizedRemoteOK = normalizeRemoteOKJobs(remoteOKJobs)
       const remoteOKResult = await dedupeAndUpsertJobs(supabase, normalizedRemoteOK)
       stats.remoteok.processed = remoteOKResult.inserted
+      stats.remoteok.qualityCalculated = remoteOKResult.qualityCalculated
       stats.remoteok.errors = remoteOKResult.errors
 
       await supabase
@@ -127,6 +131,7 @@ export async function POST(request: NextRequest) {
       const normalizedHimalayas = normalizeHimalayasJobs(himalayasJobs)
       const himalayasResult = await dedupeAndUpsertJobs(supabase, normalizedHimalayas)
       stats.himalayas.processed = himalayasResult.inserted
+      stats.himalayas.qualityCalculated = himalayasResult.qualityCalculated
       stats.himalayas.errors = himalayasResult.errors
 
       await supabase
@@ -152,6 +157,7 @@ export async function POST(request: NextRequest) {
       const normalizedWWR = normalizeWWRJobs(wwrJobs)
       const wwrResult = await dedupeAndUpsertJobs(supabase, normalizedWWR)
       stats.weworkremotely.processed = wwrResult.inserted
+      stats.weworkremotely.qualityCalculated = wwrResult.qualityCalculated
       stats.weworkremotely.errors = wwrResult.errors
 
       await supabase
@@ -196,6 +202,7 @@ export async function POST(request: NextRequest) {
       summary: {
         totalFetched: Object.values(stats).reduce((sum, s) => sum + s.fetched, 0),
         totalProcessed: Object.values(stats).reduce((sum, s) => sum + s.processed, 0),
+        totalQualityCalculated: Object.values(stats).reduce((sum, s) => sum + s.qualityCalculated, 0),
         totalErrors: Object.values(stats).reduce((sum, s) => sum + s.errors, 0),
         staleMarked: totalStaleMarked,
         activeJobs: count,

@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/sync-jobs",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/recalculate-quality",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/update-reputation",
+      "schedule": "0 4 * * *"
     }
   ]
 }

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { JobFilters, JobsApiResponse } from '@/types'
+import type { JobFilters, JobsApiResponse, JobFiltersExtended } from '@/types'
 
 export const dynamic = 'force-dynamic'
+
+type SortOption = 'quality' | 'date' | 'salary'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
 
-  const filters: JobFilters = {
+  const filters: JobFiltersExtended = {
     search: searchParams.get('search') || undefined,
     job_types: searchParams.get('job_types')?.split(',').filter(Boolean) as JobFilters['job_types'],
     experience_levels: searchParams.get('experience_levels')?.split(',').filter(Boolean) as JobFilters['experience_levels'],
@@ -15,15 +17,36 @@ export async function GET(request: NextRequest) {
     min_salary: searchParams.get('min_salary') ? parseInt(searchParams.get('min_salary')!) : undefined,
     page: parseInt(searchParams.get('page') || '1'),
     limit: Math.min(parseInt(searchParams.get('limit') || '20'), 100),
+    // Quality filters
+    sort: (searchParams.get('sort') as SortOption) || 'quality',
+    min_quality: searchParams.get('min_quality') ? parseFloat(searchParams.get('min_quality')!) : undefined,
+    hide_ghosts: searchParams.get('hide_ghosts') === 'true',
   }
 
   const supabase = await createClient()
 
+  // Build base query with company data
   let query = supabase
     .from('jobs')
-    .select('*', { count: 'exact' })
+    .select('*, companies(id, name, logo_url, is_verified)', { count: 'exact' })
     .eq('is_active', true)
-    .order('posted_date', { ascending: false, nullsFirst: false })
+
+  // Apply sorting based on sort parameter
+  switch (filters.sort) {
+    case 'salary':
+      query = query.order('salary_max', { ascending: false, nullsFirst: false })
+      break
+    case 'date':
+      query = query.order('posted_date', { ascending: false, nullsFirst: false })
+      break
+    case 'quality':
+    default:
+      // Sort by quality_score, then by posted_date as secondary
+      query = query
+        .order('quality_score', { ascending: false, nullsFirst: false })
+        .order('posted_date', { ascending: false, nullsFirst: false })
+      break
+  }
 
   // Apply search filter (title, company, description)
   if (filters.search) {
@@ -48,6 +71,16 @@ export async function GET(request: NextRequest) {
   // Apply min_salary filter
   if (filters.min_salary) {
     query = query.or(`salary_max.gte.${filters.min_salary},salary_max.is.null`)
+  }
+
+  // Apply quality filters
+  if (filters.min_quality && filters.min_quality > 0) {
+    query = query.gte('quality_score', filters.min_quality)
+  }
+
+  // Hide suspicious jobs (ghost_score >= 5)
+  if (filters.hide_ghosts) {
+    query = query.lt('ghost_score', 5)
   }
 
   // Pagination

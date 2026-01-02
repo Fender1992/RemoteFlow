@@ -5,7 +5,9 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { formatSalary, formatDate, capitalizeFirst } from '@/lib/utils'
-import type { Job } from '@/types'
+import QualityBadge from '@/components/jobs/QualityBadge'
+import { ReportJobModal } from '@/components/jobs/ReportJobModal'
+import type { Job, GhostFlag } from '@/types'
 
 interface JobCardProps {
   job: Job
@@ -15,6 +17,7 @@ interface JobCardProps {
   onUnsave?: (jobId: string) => Promise<void>
   onApply?: (jobId: string) => Promise<void>
   showActions?: boolean
+  showReportButton?: boolean
 }
 
 export function JobCard({
@@ -25,9 +28,11 @@ export function JobCard({
   onUnsave,
   onApply,
   showActions = true,
+  showReportButton = true,
 }: JobCardProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(isSaved)
+  const [showReportModal, setShowReportModal] = useState(false)
 
   const handleSaveToggle = async () => {
     if (saving) return
@@ -68,11 +73,22 @@ export function JobCard({
                   className="w-10 h-10 rounded-lg object-contain bg-gray-50"
                 />
               )}
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-600">{job.company}</p>
                 <p className="text-xs text-gray-400">{formatDate(job.posted_date)}</p>
               </div>
             </div>
+
+            {/* Quality badges */}
+            <QualityBadge
+              quality_score={job.quality_score ?? 0.5}
+              ghost_score={job.ghost_score ?? 0}
+              ghost_flags={(job.ghost_flags ?? []) as GhostFlag[]}
+              company_verified={job.company_data?.is_verified}
+              posted_date={job.posted_date}
+              repost_count={job.repost_count}
+              className="mb-2"
+            />
 
             {/* Job title */}
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -148,10 +164,26 @@ export function JobCard({
               >
                 View Job
               </a>
+              {showReportButton && (
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="text-center text-xs text-gray-400 hover:text-red-500"
+                >
+                  Report
+                </button>
+              )}
             </div>
           )}
         </div>
       </CardContent>
+
+      {/* Report Modal */}
+      <ReportJobModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        jobId={job.id}
+        jobTitle={job.title}
+      />
     </Card>
   )
 }
