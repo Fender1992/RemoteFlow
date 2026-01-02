@@ -1,0 +1,78 @@
+{
+  "manifest_version": 3,
+  "name": "RemoteFlow - Application Tracker",
+  "version": "1.0.0",
+  "description": "Automatically track your job applications across ATS platforms and sync with RemoteFlow",
+
+  "permissions": [
+    "storage",
+    "cookies",
+    "tabs",
+    "alarms"
+  ],
+
+  "host_permissions": [
+    "https://remoteflow.io/*",
+    "https://*.supabase.co/*",
+    "*://boards.greenhouse.io/*",
+    "*://jobs.greenhouse.io/*",
+    "*://*.greenhouse.io/*",
+    "*://jobs.lever.co/*",
+    "*://*.lever.co/*",
+    "*://*.myworkdayjobs.com/*",
+    "*://*.myworkdaysite.com/*",
+    "*://jobs.ashbyhq.com/*",
+    "*://*.ashbyhq.com/*",
+    "*://www.linkedin.com/*",
+    "*://www.indeed.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background/index.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "*://boards.greenhouse.io/*",
+        "*://jobs.greenhouse.io/*",
+        "*://*.greenhouse.io/embed/*",
+        "*://jobs.lever.co/*",
+        "*://*.lever.co/jobs/*",
+        "*://*.myworkdayjobs.com/*",
+        "*://*.wd5.myworkdaysite.com/*",
+        "*://jobs.ashbyhq.com/*",
+        "*://*.ashbyhq.com/jobs/*",
+        "*://www.linkedin.com/jobs/*",
+        "*://www.indeed.com/viewjob*",
+        "*://www.indeed.com/apply/*"
+      ],
+      "js": ["content/index.js"],
+      "css": ["content/styles/toast.css"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "icons/icon16.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon16.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["content/styles/toast.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

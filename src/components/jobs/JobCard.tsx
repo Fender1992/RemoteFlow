@@ -245,6 +245,37 @@ export function JobCard({
                 <span>Reposted {job.repost_count}x</span>
               </div>
             )}
+
+            {/* Application count badge */}
+            {(job.application_count ?? 0) >= 5 && (
+              <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+                <svg className="w-4 h-4 text-[var(--text-tertiary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span>{job.application_count} applied via RemoteFlow</span>
+              </div>
+            )}
+
+            {/* Application time indicator */}
+            {job.avg_time_to_apply_seconds != null && (
+              <div className={cn(
+                "flex items-center gap-1.5 text-sm",
+                job.avg_time_to_apply_seconds < 300
+                  ? "text-[var(--health-good-text)]"
+                  : job.avg_time_to_apply_seconds > 900
+                    ? "text-[var(--health-caution-text)]"
+                    : "text-[var(--text-tertiary)]"
+              )}>
+                <span>
+                  {job.avg_time_to_apply_seconds < 300
+                    ? `⚡ Quick apply (${Math.round(job.avg_time_to_apply_seconds / 60)} min avg)`
+                    : job.avg_time_to_apply_seconds > 900
+                      ? `📝 Long application (${Math.round(job.avg_time_to_apply_seconds / 60)} min avg)`
+                      : `${Math.round(job.avg_time_to_apply_seconds / 60)} min avg to apply`
+                  }
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

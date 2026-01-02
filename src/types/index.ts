@@ -56,6 +56,10 @@ export interface Job {
   quality_updated_at?: string | null
   company_id?: string | null
   company_data?: Company
+  // Application tracking fields
+  application_count?: number
+  avg_time_to_apply_seconds?: number | null
+  application_stats_updated_at?: string | null
 }
 
 // Type for inserting new jobs (without auto-generated fields)
@@ -68,6 +72,8 @@ export interface SavedJob {
   status: SavedJobStatus
   notes: string | null
   applied_date: string | null
+  applied_via?: AtsType | null
+  tracking_started_at?: string | null
   created_at: string
   job?: Job
 }
@@ -392,3 +398,91 @@ export const SUGGESTED_QUESTIONS = [
 ] as const
 
 export type SuggestedQuestion = (typeof SUGGESTED_QUESTIONS)[number]
+
+// ============================================================================
+// Application Tracking Types (Browser Extension)
+// ============================================================================
+
+export type AtsType =
+  | 'greenhouse'
+  | 'lever'
+  | 'workday'
+  | 'ashby'
+  | 'taleo'
+  | 'icims'
+  | 'bamboohr'
+  | 'smartrecruiters'
+  | 'linkedin'
+  | 'indeed'
+  | 'unknown'
+
+export type TrackingEventType = 'started' | 'submitted' | 'abandoned'
+
+export type DetectionMethod =
+  | 'form_submit'
+  | 'success_page'
+  | 'success_text'
+  | 'url_change'
+  | 'ajax_intercept'
+  | 'button_click'
+  | 'manual'
+
+export interface ApplicationTrackingEvent {
+  id: string
+  user_id: string
+  saved_job_id: string | null
+  job_id: string | null
+  event_type: TrackingEventType
+  ats_type: AtsType | null
+  detection_method: DetectionMethod | null
+  time_spent_seconds: number | null
+  source_url: string | null
+  normalized_url: string | null
+  metadata: Record<string, unknown>
+  event_timestamp: string
+  created_at: string
+}
+
+export interface TrackEventRequest {
+  jobId?: string
+  url?: string
+  event: TrackingEventType
+  atsType?: AtsType
+  detectionMethod?: DetectionMethod
+  timeSpentSeconds?: number
+  metadata?: Record<string, unknown>
+}
+
+export interface TrackEventResponse {
+  success: boolean
+  event_id?: string
+  matched_job_id?: string | null
+  matched_saved_job_id?: string | null
+  error?: string
+}
+
+export interface CheckUrlResponse {
+  found: boolean
+  url: string
+  normalized_url: string
+  detected_ats: AtsType | null
+  job?: {
+    id: string
+    title: string
+    company: string
+    company_logo: string | null
+    url: string
+    salary_min: number | null
+    salary_max: number | null
+    currency: string
+    application_count: number
+    avg_time_to_apply_seconds: number | null
+  }
+  saved?: {
+    id: string
+    status: SavedJobStatus
+    notes: string | null
+    applied_date: string | null
+    saved_at: string
+  }
+}
