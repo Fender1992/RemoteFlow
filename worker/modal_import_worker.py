@@ -331,6 +331,7 @@ async def search_site_with_claude(
 
     try:
         # Call Claude with Computer Use capability
+        # Note: Computer Use is now GA, no beta parameter needed
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=8192,
@@ -344,7 +345,6 @@ async def search_site_with_claude(
                 }
             ],
             messages=[{"role": "user", "content": prompt}],
-            betas=["computer-use-2025-01-24"],
         )
 
         # Extract text content from response
@@ -571,7 +571,7 @@ async def save_jobs_to_database(
     timeout=900,  # 15 minutes
     secrets=[modal.Secret.from_name("remoteflow-secrets")],
 )
-async def process_import(session_id: str):
+async def process_import(session_id: str, user_api_key: Optional[str] = None):
     """
     Main worker function: process an import session.
 
@@ -579,6 +579,10 @@ async def process_import(session_id: str):
     2. For each enabled site, use Claude Computer Use to extract jobs
     3. Save jobs to database with deduplication
     4. Update progress in real-time
+
+    Args:
+        session_id: The import session ID
+        user_api_key: Optional user-provided Anthropic API key (for non-max tier users)
     """
     from anthropic import Anthropic
     from supabase import create_client
@@ -596,7 +600,18 @@ async def process_import(session_id: str):
     supabase = create_client(supabase_url, supabase_key)
 
     # Initialize Anthropic client
-    anthropic = Anthropic()
+    # Use user-provided key if available, otherwise fall back to platform key
+    api_key = user_api_key or os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        print("ERROR: No Anthropic API key available")
+        supabase.table("import_sessions").update({
+            "status": "failed",
+            "error_message": "No API key configured. Please add your Anthropic API key in Preferences.",
+        }).eq("id", session_id).execute()
+        return {"error": "No API key available"}
+
+    anthropic = Anthropic(api_key=api_key)
+    print(f"Using {'user-provided' if user_api_key else 'platform'} API key")
 
     # Fetch session details
     session_result = (
@@ -731,16 +746,20 @@ async def webhook(request: dict):
     """
     Webhook endpoint called by Next.js to start an import.
 
-    Request body: {"session_id": "uuid"}
+    Request body: {
+        "session_id": "uuid",
+        "anthropic_api_key": "sk-ant-..." (optional, for non-max tier users)
+    }
     Response: {"status": "started", "session_id": "uuid"}
     """
     session_id = request.get("session_id")
+    user_api_key = request.get("anthropic_api_key")  # Optional user-provided key
 
     if not session_id:
         return {"error": "session_id is required"}, 400
 
-    # Spawn the worker asynchronously
-    process_import.spawn(session_id)
+    # Spawn the worker asynchronously with optional user API key
+    process_import.spawn(session_id, user_api_key)
 
     return {
         "status": "started",
