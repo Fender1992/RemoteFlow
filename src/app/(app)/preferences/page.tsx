@@ -6,8 +6,13 @@ export default async function PreferencesPage() {
 
   const { data: profile } = await supabase
     .from('users_profile')
-    .select('preferences')
+    .select('preferences, subscription_tier')
     .single()
 
-  return <PreferencesClient initialPreferences={profile?.preferences || {}} />
+  return (
+    <PreferencesClient
+      initialPreferences={profile?.preferences || {}}
+      subscriptionTier={profile?.subscription_tier || 'free'}
+    />
+  )
 }
