@@ -36,6 +36,12 @@ export function Header({ user }: HeaderProps) {
                   Jobs
                 </Link>
                 <Link
+                  href="/import"
+                  className="text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Find Jobs
+                </Link>
+                <Link
                   href="/saved"
                   className="text-gray-600 hover:text-gray-900 font-medium"
                 >
