@@ -173,7 +173,7 @@ export function PreferencesClient({ initialPreferences }: PreferencesClientProps
                   onChange={(e) => setNewRole(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddRole()}
                   placeholder="Add a job title..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <Button variant="secondary" onClick={handleAddRole}>
                   Add
@@ -235,7 +235,7 @@ export function PreferencesClient({ initialPreferences }: PreferencesClientProps
                       onChange={(e) => setNewCity(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAddCity()}
                       placeholder="Add a city..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <Button variant="secondary" size="sm" onClick={handleAddCity}>
                       Add
@@ -282,7 +282,7 @@ export function PreferencesClient({ initialPreferences }: PreferencesClientProps
                     value={preferences.salary_range?.min || ''}
                     onChange={(e) => handleSalaryChange('min', e.target.value)}
                     placeholder="100000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -296,7 +296,7 @@ export function PreferencesClient({ initialPreferences }: PreferencesClientProps
                     value={preferences.salary_range?.max || ''}
                     onChange={(e) => handleSalaryChange('max', e.target.value)}
                     placeholder="200000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>

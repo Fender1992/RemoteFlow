@@ -189,7 +189,7 @@ export function ReportJobModal({ isOpen, onClose, jobId, jobTitle }: ReportJobMo
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
                   placeholder="Provide any additional information..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 />
               </div>
 

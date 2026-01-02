@@ -104,7 +104,7 @@ export function JobFilters() {
         <select
           value={currentSort}
           onChange={(e) => updateSingleFilter('sort', e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
         >
           {SORT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
