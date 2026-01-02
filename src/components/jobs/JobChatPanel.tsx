@@ -236,7 +236,7 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
                 To use job chat, please add your CacheGPT API key in{' '}
-                <a href="/settings" className="underline font-medium">
+                <a href="/preferences" className="underline font-medium">
                   Settings
                 </a>
                 .
