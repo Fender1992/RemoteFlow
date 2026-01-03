@@ -5,6 +5,9 @@ interface SearchParams {
   search?: string
   job_types?: string
   experience_levels?: string
+  health?: string
+  hide_ghosts?: string
+  sort?: string
   page?: string
 }
 
@@ -21,7 +24,6 @@ export default async function JobsPage({
     .from('jobs')
     .select('*', { count: 'exact' })
     .eq('is_active', true)
-    .order('posted_date', { ascending: false, nullsFirst: false })
 
   // Apply filters
   if (params.search) {
@@ -40,6 +42,41 @@ export default async function JobsPage({
     if (levels.length > 0) {
       query = query.in('experience_level', levels)
     }
+  }
+
+  // Health filter (based on ghost_score)
+  if (params.health) {
+    const healthValues = params.health.split(',').filter(Boolean)
+    const conditions: string[] = []
+
+    if (healthValues.includes('healthy')) {
+      conditions.push('ghost_score.lt.3')
+    }
+    if (healthValues.includes('caution')) {
+      conditions.push('and(ghost_score.gte.3,ghost_score.lt.7)')
+    }
+    if (healthValues.includes('danger')) {
+      conditions.push('ghost_score.gte.7')
+    }
+
+    if (conditions.length > 0) {
+      query = query.or(conditions.join(','))
+    }
+  }
+
+  // Hide ghosts filter
+  if (params.hide_ghosts === 'true') {
+    query = query.lt('ghost_score', 5)
+  }
+
+  // Sort option
+  const sortBy = params.sort || 'date'
+  if (sortBy === 'quality') {
+    query = query.order('quality_score', { ascending: false, nullsFirst: false })
+  } else if (sortBy === 'salary') {
+    query = query.order('salary_max', { ascending: false, nullsFirst: false })
+  } else {
+    query = query.order('posted_date', { ascending: false, nullsFirst: false })
   }
 
   // Pagination

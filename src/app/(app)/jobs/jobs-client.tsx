@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { JobList } from '@/components/jobs/JobList'
 import { JobFilters } from '@/components/jobs/JobFilters'
@@ -28,7 +28,6 @@ function JobsClientInner({
 }: JobsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [jobs] = useState(initialJobs)
   const [saved, setSaved] = useState(initialSavedJobs)
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
   const isMobile = useIsMobile()
@@ -112,7 +111,7 @@ function JobsClientInner({
           </div>
 
           <JobList
-            jobs={jobs}
+            jobs={initialJobs}
             savedJobs={savedJobsForList}
             onSave={handleSave}
             onUnsave={handleUnsave}
