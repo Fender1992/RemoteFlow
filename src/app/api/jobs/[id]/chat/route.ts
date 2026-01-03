@@ -105,11 +105,11 @@ export async function POST(
     }
   }
 
-  // 5. Check rate limits
+  // 5. Check rate limits (per-job)
   const serviceClient = createServiceClient()
   const { data: limitCheck, error: limitError } = await serviceClient.rpc(
     'check_job_chat_limit',
-    { p_user_id: user.id }
+    { p_user_id: user.id, p_job_id: jobId }
   )
 
   if (limitError) {
@@ -125,11 +125,10 @@ export async function POST(
     return NextResponse.json(
       {
         error: 'rate_limit_exceeded',
-        message: `Daily chat limit reached (${RATE_LIMITS[tier]}/day). Resets at midnight.`,
+        message: `You've used all ${RATE_LIMITS[tier]} questions for this job. Try asking about other jobs!`,
         usage: {
           remaining: 0,
-          limit: limit?.limit_amount || RATE_LIMITS[tier],
-          resetAt: limit?.reset_at,
+          limit: limit?.limit_value || RATE_LIMITS[tier],
         },
       },
       { status: 429 }
@@ -205,6 +204,7 @@ export async function POST(
     serviceClient
       .rpc('increment_job_chat_usage', {
         p_user_id: user.id,
+        p_job_id: jobId,
         p_was_cached: result.cached,
       })
       .then(() => {
@@ -228,8 +228,8 @@ export async function POST(
       cached: result.cached,
       responseTimeMs,
       usage: {
-        remaining: Math.max(0, (limit?.remaining || RATE_LIMITS[tier]) - 1),
-        limit: limit?.limit_amount || RATE_LIMITS[tier],
+        remaining: Math.max(0, (limit?.remaining || RATE_LIMITS[tier]) - (result.cached ? 0 : 1)),
+        limit: limit?.limit_value || RATE_LIMITS[tier],
       },
     })
   } catch (error) {
@@ -258,12 +258,13 @@ export async function POST(
 
 /**
  * GET /api/jobs/[id]/chat
- * Get current usage limits for job chat
+ * Get current usage limits for job chat (per-job)
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: jobId } = await params
   const supabase = await createClient()
 
   // Authenticate user
@@ -287,11 +288,11 @@ export async function GET(
   const isMaxTier = tier === 'max' || tier === 'enterprise'
   const hasKey = isMaxTier || !!profile?.cachegpt_api_key
 
-  // Check current usage
+  // Check current usage for this specific job
   const serviceClient = createServiceClient()
   const { data: limitCheck, error: limitError } = await serviceClient.rpc(
     'check_job_chat_limit',
-    { p_user_id: user.id }
+    { p_user_id: user.id, p_job_id: jobId }
   )
 
   if (limitError) {
@@ -310,8 +311,7 @@ export async function GET(
     tier,
     usage: {
       remaining: limit?.remaining ?? RATE_LIMITS[tier],
-      limit: limit?.limit_amount ?? RATE_LIMITS[tier],
-      resetAt: limit?.reset_at || null,
+      limit: limit?.limit_value ?? RATE_LIMITS[tier],
     },
   })
 }

@@ -1,0 +1,221 @@
+/* JobIQ Save Prompt Styles */
+
+#jobiq-save-prompt-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.jobiq-save-prompt {
+  transform: translateY(120%);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.jobiq-save-prompt--visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.jobiq-save-prompt--hiding {
+  transform: translateY(120%);
+  opacity: 0;
+}
+
+.jobiq-save-prompt__inner {
+  position: relative;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+  padding: 20px;
+  min-width: 300px;
+  max-width: 360px;
+}
+
+.jobiq-save-prompt__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.jobiq-save-prompt__close:hover {
+  color: #9ca3af;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.jobiq-save-prompt__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.jobiq-save-prompt__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.jobiq-save-prompt__icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.jobiq-save-prompt__icon svg {
+  width: 22px;
+  height: 22px;
+  color: #ffffff;
+}
+
+.jobiq-save-prompt__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.jobiq-save-prompt__job {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.jobiq-save-prompt__job-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #ffffff;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.jobiq-save-prompt__job-company {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+.jobiq-save-prompt__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.jobiq-save-prompt__btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.jobiq-save-prompt__btn--dismiss {
+  background: rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+}
+
+.jobiq-save-prompt__btn--dismiss:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #d1d5db;
+}
+
+.jobiq-save-prompt__btn--save {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.jobiq-save-prompt__btn--save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+}
+
+.jobiq-save-prompt__btn--save:active {
+  transform: translateY(0);
+}
+
+.jobiq-save-prompt__btn--save:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.jobiq-save-prompt__btn--success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3) !important;
+}
+
+.jobiq-save-prompt__btn--error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+
+.jobiq-save-prompt__brand {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.jobiq-save-prompt__brand-text {
+  font-size: 11px;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+}
+
+/* Pulse animation for icon */
+@keyframes jobiq-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(124, 58, 237, 0);
+  }
+}
+
+.jobiq-save-prompt--visible .jobiq-save-prompt__icon {
+  animation: jobiq-pulse 2s infinite;
+}
+
+/* Dark mode compatibility - ensure visibility on light backgrounds */
+@media (prefers-color-scheme: light) {
+  .jobiq-save-prompt__inner {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  }
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 480px) {
+  #jobiq-save-prompt-container {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+  }
+
+  .jobiq-save-prompt__inner {
+    min-width: auto;
+    max-width: none;
+  }
+}

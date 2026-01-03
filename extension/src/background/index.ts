@@ -7,6 +7,8 @@ import type {
   SessionSubmittedPayload,
   CheckUrlPayload,
   ShowToastPayload,
+  LogJobViewPayload,
+  SaveViewedJobPayload,
 } from '../types'
 
 console.log('[JobIQ] Background service worker started')
@@ -98,6 +100,46 @@ async function handleMessage(message: Message, sender: chrome.runtime.MessageSen
     case 'GET_SAVED_JOBS': {
       const jobs = await api.getSavedJobs()
       return { success: true, jobs }
+    }
+
+    case 'LOG_JOB_VIEW': {
+      const payload = message.payload as LogJobViewPayload
+      try {
+        await api.logJobView(payload)
+        console.log('[JobIQ] Job view logged:', payload.url)
+        return { success: true }
+      } catch (error) {
+        console.error('[JobIQ] Failed to log job view:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    }
+
+    case 'SAVE_VIEWED_JOB': {
+      const payload = message.payload as SaveViewedJobPayload
+      try {
+        const result = await api.saveViewedJob(payload)
+        console.log('[JobIQ] Viewed job saved:', payload.url)
+
+        // Show success toast if we have a tab
+        if (tabId) {
+          chrome.tabs.sendMessage(tabId, {
+            type: 'SHOW_TOAST',
+            payload: {
+              message: '✓ Job saved to JobIQ!',
+              type: 'success',
+              action: {
+                label: 'View',
+                url: 'https://jobiq.careers/saved',
+              },
+            } as ShowToastPayload,
+          })
+        }
+
+        return { success: true, job: result }
+      } catch (error) {
+        console.error('[JobIQ] Failed to save viewed job:', error)
+        return { success: false, error: (error as Error).message }
+      }
     }
 
     default:

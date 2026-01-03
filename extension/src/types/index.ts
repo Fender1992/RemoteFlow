@@ -10,6 +10,8 @@ export type MessageType =
   | 'SYNC_SESSION'
   | 'SHOW_TOAST'
   | 'GET_SAVED_JOBS'
+  | 'LOG_JOB_VIEW'
+  | 'SAVE_VIEWED_JOB'
 
 export interface Message<T = unknown> {
   type: MessageType
@@ -133,4 +135,29 @@ export type AtsType =
   | 'icims'
   | 'linkedin'
   | 'indeed'
+  | 'glassdoor'
   | 'unknown'
+
+// Job view tracking payloads
+export interface LogJobViewPayload {
+  url: string
+  title: string
+  company: string
+  platform: string
+  jobId?: string
+}
+
+export interface SaveViewedJobPayload {
+  url: string
+  title: string
+  company: string
+  platform: string
+}
+
+// Detected job from page
+export interface DetectedJob {
+  url: string
+  title: string
+  company: string
+  platform: 'linkedin' | 'indeed' | 'glassdoor' | 'greenhouse' | 'lever' | 'workday'
+}

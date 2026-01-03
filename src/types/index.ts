@@ -486,3 +486,49 @@ export interface CheckUrlResponse {
     saved_at: string
   }
 }
+
+// ============================================================================
+// Job Views Types (Passive View Tracking from Extension)
+// ============================================================================
+
+export type JobViewPlatform =
+  | 'linkedin'
+  | 'indeed'
+  | 'glassdoor'
+  | 'greenhouse'
+  | 'lever'
+  | 'workday'
+  | 'ashby'
+  | 'dice'
+  | 'wellfound'
+  | 'remotive'
+  | 'unknown'
+
+export interface JobView {
+  id: string
+  user_id: string
+  url: string
+  job_id: string | null
+  title: string | null
+  company: string | null
+  platform: JobViewPlatform | null
+  viewed_at: string
+  prompted_to_save: boolean
+  saved: boolean
+}
+
+export interface JobViewsApiResponse {
+  views: JobView[]
+  total: number
+  page: number
+  limit: number
+  hasMore: boolean
+}
+
+export interface CreateJobViewRequest {
+  url: string
+  title?: string
+  company?: string
+  platform?: JobViewPlatform
+  job_id?: string
+}

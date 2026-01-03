@@ -106,11 +106,17 @@ export function MobileMenu({ isOpen, onClose, user, onSignOut }: MobileMenuProps
                 <MobileNavLink href="/import" isActive={isActive('/import')} onClick={onClose}>
                   Find Jobs
                 </MobileNavLink>
+                <MobileNavLink href="/viewed" isActive={isActive('/viewed')} onClick={onClose}>
+                  Viewed
+                </MobileNavLink>
                 <MobileNavLink href="/saved" isActive={isActive('/saved')} onClick={onClose}>
                   Saved
                 </MobileNavLink>
+                <MobileNavLink href="/profile" isActive={isActive('/profile')} onClick={onClose}>
+                  Profile
+                </MobileNavLink>
                 <MobileNavLink href="/preferences" isActive={isActive('/preferences')} onClick={onClose}>
-                  Preferences
+                  Settings
                 </MobileNavLink>
               </>
             ) : (

@@ -7,6 +7,7 @@ import { formatSalary, formatDate, capitalizeFirst, cn } from '@/lib/utils'
 import { JobHealthBadge, getHealthStatus } from '@/components/jobs/JobHealthBadge'
 import { ReportJobModal } from '@/components/jobs/ReportJobModal'
 import { JobChatPanel } from '@/components/jobs/JobChatPanel'
+import { MatchBadge } from '@/components/jobs/MatchBadge'
 import type { Job, GhostFlag, Company, CompanyReputation } from '@/types'
 
 interface JobCardProps {
@@ -18,6 +19,7 @@ interface JobCardProps {
   onApply?: (jobId: string) => Promise<void>
   showActions?: boolean
   showReportButton?: boolean
+  showMatchBadge?: boolean
 }
 
 // Extended Company type that includes reputation
@@ -51,6 +53,7 @@ export function JobCard({
   onApply,
   showActions = true,
   showReportButton = true,
+  showMatchBadge = true,
 }: JobCardProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(isSaved)
@@ -148,17 +151,22 @@ export function JobCard({
           )}
         </div>
 
-        {/* Title section with hover color change */}
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3 group">
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[var(--primary-600)] transition-colors"
-          >
-            {job.title}
-          </a>
-        </h3>
+        {/* Title section with hover color change and match badge */}
+        <div className="flex items-start gap-2 mb-3">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] group flex-1">
+            <a
+              href={job.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[var(--primary-600)] transition-colors"
+            >
+              {job.title}
+            </a>
+          </h3>
+          {showMatchBadge && (
+            <MatchBadge jobId={job.id} className="flex-shrink-0" />
+          )}
+        </div>
 
         {/* Meta row: Location, Salary, Job Type with icons */}
         <div className="flex flex-wrap items-center gap-3 mb-3 text-sm text-[var(--text-secondary)]">

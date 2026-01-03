@@ -21,7 +21,6 @@ const SUGGESTED_QUESTIONS_LIST: string[] = [
 interface ChatUsage {
   remaining: number
   limit: number
-  resetAt: string | null
 }
 
 export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
@@ -232,7 +231,7 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
           {usage && (
             <div className="mt-2 flex items-center text-xs text-gray-500">
               <span className={usage.remaining <= 2 ? 'text-orange-600' : ''}>
-                {usage.remaining}/{usage.limit} questions remaining today
+                {usage.remaining}/{usage.limit} questions for this job
               </span>
             </div>
           )}
@@ -362,7 +361,7 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
           </div>
           {usage && usage.remaining <= 0 && (
             <p className="text-xs text-gray-500 mt-2">
-              Daily limit reached. Resets at midnight.
+              You've used all questions for this job. Try asking about other jobs!
             </p>
           )}
         </div>

@@ -74,11 +74,17 @@ export function Header({ user }: HeaderProps) {
                 <NavLink href="/import" isActive={isActive('/import')}>
                   Find Jobs
                 </NavLink>
+                <NavLink href="/viewed" isActive={isActive('/viewed')}>
+                  Viewed
+                </NavLink>
                 <NavLink href="/saved" isActive={isActive('/saved')}>
                   Saved
                 </NavLink>
+                <NavLink href="/profile" isActive={isActive('/profile')}>
+                  Profile
+                </NavLink>
                 <NavLink href="/preferences" isActive={isActive('/preferences')}>
-                  Preferences
+                  Settings
                 </NavLink>
               </nav>
             )}

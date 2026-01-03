@@ -135,6 +135,52 @@ export class JobIQAPI {
 
     return data
   }
+
+  /**
+   * Log a job view (passive tracking)
+   */
+  async logJobView(view: {
+    url: string
+    title: string
+    company: string
+    platform: string
+    jobId?: string
+  }): Promise<void> {
+    const { error } = await this.request('/job-views', {
+      method: 'POST',
+      body: JSON.stringify(view),
+    })
+
+    if (error) {
+      console.error('[JobIQ API] Log job view failed:', error)
+      throw new Error(error)
+    }
+  }
+
+  /**
+   * Save a viewed job to saved jobs
+   */
+  async saveViewedJob(job: {
+    url: string
+    title: string
+    company: string
+    platform: string
+  }): Promise<{ id: string; job_id: string }> {
+    const { data, error } = await this.request<{ id: string; job_id: string }>(
+      '/job-views/save',
+      {
+        method: 'POST',
+        body: JSON.stringify(job),
+      }
+    )
+
+    if (error || !data) {
+      console.error('[JobIQ API] Save viewed job failed:', error)
+      throw new Error(error || 'Failed to save job')
+    }
+
+    return data
+  }
 }
 
 export const api = new JobIQAPI()
