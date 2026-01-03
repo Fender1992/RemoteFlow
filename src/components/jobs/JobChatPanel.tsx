@@ -187,51 +187,59 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/30"
+      className="fixed inset-0 z-50 bg-black/30 md:flex md:justify-end"
       onClick={handleOverlayClick}
     >
-      {/* Sliding panel */}
+      {/* Mobile: Full screen slide-up, Desktop: Side panel */}
       <div
-        className="w-full h-full md:h-auto md:max-w-md bg-white shadow-xl flex flex-col animate-slide-in-right"
+        className="absolute inset-x-0 bottom-0 top-0 md:relative md:inset-auto md:w-full md:max-w-md md:h-full bg-white shadow-xl flex flex-col"
         style={{
-          animation: 'slideInRight 0.2s ease-out',
+          animation: 'slideUp 0.25s ease-out',
         }}
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
+        <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 bg-gray-50 safe-area-top">
+          <div className="flex items-center gap-3">
+            {/* Mobile back button */}
             <button
               onClick={onClose}
-              className="md:hidden p-1 text-gray-400 hover:text-gray-600 rounded -ml-1"
+              className="md:hidden flex-shrink-0 p-2 -ml-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               disabled={isLoading}
+              aria-label="Close"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <div className="flex-1 min-w-0 mr-3">
-              <h2 className="text-sm font-semibold text-gray-900 truncate">
+
+            {/* Title section */}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-semibold text-gray-900 truncate">
                 Ask about this job
               </h2>
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-sm text-gray-500 truncate">
                 {job.title} at {job.company}
               </p>
             </div>
+
+            {/* Desktop close button */}
             <button
               onClick={onClose}
-              className="hidden md:block p-1 text-gray-400 hover:text-gray-600 rounded"
+              className="hidden md:flex flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               disabled={isLoading}
+              aria-label="Close"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
+
           {/* Usage indicator */}
           {usage && (
-            <div className="mt-2 flex items-center text-xs text-gray-500">
-              <span className={usage.remaining <= 2 ? 'text-orange-600' : ''}>
-                {usage.remaining}/{usage.limit} questions for this job
+            <div className="mt-2 flex items-center text-xs text-gray-500 md:ml-0 ml-8">
+              <span className={usage.remaining <= 2 ? 'text-orange-600 font-medium' : ''}>
+                {usage.remaining}/{usage.limit} questions remaining
               </span>
             </div>
           )}
@@ -257,17 +265,17 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
 
           {/* Empty state with suggested questions */}
           {messages.length === 0 && !needsKey && (
-            <div className="py-4">
-              <p className="text-sm text-gray-500 mb-3">
+            <div className="py-2">
+              <p className="text-sm text-gray-500 mb-4">
                 Ask me anything about this job listing. Try one of these:
               </p>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {SUGGESTED_QUESTIONS_LIST.map((question) => (
                   <button
                     key={question}
                     onClick={() => handleSuggestedQuestion(question)}
                     disabled={isLoading || (usage?.remaining ?? 1) <= 0}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {question}
                   </button>
@@ -283,21 +291,21 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[85%] rounded-lg px-3 py-2 ${
+                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                   message.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
+                    ? 'bg-blue-600 text-white rounded-br-md'
+                    : 'bg-gray-100 text-gray-900 rounded-bl-md'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 {/* Cached indicator for assistant messages */}
                 {message.role === 'assistant' && message.cached && (
-                  <span className="inline-flex items-center mt-1 px-1.5 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded">
+                  <span className="inline-flex items-center mt-2 px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
                     Instant
                   </span>
                 )}
                 {message.role === 'assistant' && message.responseTimeMs && !message.cached && (
-                  <span className="text-xs text-gray-400 mt-1 block">
+                  <span className="text-xs text-gray-400 mt-2 block">
                     {(message.responseTimeMs / 1000).toFixed(1)}s
                   </span>
                 )}
@@ -329,7 +337,7 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
         </div>
 
         {/* Input area */}
-        <div className="px-4 py-3 border-t border-gray-200 bg-white" style={{ paddingBottom: 'calc(var(--safe-area-bottom, 0px) + 0.75rem)' }}>
+        <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200 bg-white safe-area-bottom">
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -339,28 +347,29 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
               onKeyDown={handleKeyDown}
               placeholder={needsKey ? 'Add API key to chat...' : 'Ask a question...'}
               disabled={isLoading || needsKey || (usage?.remaining ?? 1) <= 0}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
             />
             <Button
               variant="primary"
               size="sm"
               onClick={() => sendMessage(inputValue)}
               disabled={isLoading || !inputValue.trim() || needsKey || (usage?.remaining ?? 1) <= 0}
+              className="!px-4 !py-3 !rounded-xl"
             >
               {isLoading ? (
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
               ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               )}
             </Button>
           </div>
           {usage && usage.remaining <= 0 && (
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-500 mt-2 text-center">
               You've used all questions for this job. Try asking about other jobs!
             </p>
           )}
@@ -369,13 +378,31 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
 
       {/* CSS for slide animation */}
       <style jsx>{`
-        @keyframes slideInRight {
+        @keyframes slideUp {
           from {
-            transform: translateX(100%);
+            transform: translateY(100%);
+            opacity: 0.8;
           }
           to {
-            transform: translateX(0);
+            transform: translateY(0);
+            opacity: 1;
           }
+        }
+        @media (min-width: 768px) {
+          @keyframes slideUp {
+            from {
+              transform: translateX(100%);
+            }
+            to {
+              transform: translateX(0);
+            }
+          }
+        }
+        .safe-area-top {
+          padding-top: max(0.75rem, env(safe-area-inset-top));
+        }
+        .safe-area-bottom {
+          padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
         }
       `}</style>
     </div>
