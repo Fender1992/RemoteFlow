@@ -194,8 +194,8 @@ export function JobCard({
           )}
         </div>
 
-        {/* Tags section (tech stack, experience level) - limit to 6 */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        {/* Tags section (tech stack, experience level) - limit to 6, horizontal scroll on mobile */}
+        <div className="horizontal-scroll flex flex-nowrap sm:flex-wrap gap-1.5 mb-4 -mx-1 px-1">
           {job.experience_level && job.experience_level !== 'any' && (
             <Badge variant="default">{capitalizeFirst(job.experience_level)}</Badge>
           )}
@@ -214,9 +214,9 @@ export function JobCard({
           )}
         </div>
 
-        {/* Intelligence section - gray background panel */}
+        {/* Intelligence section - gray background panel, stacks on mobile */}
         <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-[var(--border-default)]">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
             {/* Health badge */}
             <JobHealthBadge
               healthScore={healthScore}
@@ -252,7 +252,7 @@ export function JobCard({
                 <svg className="w-4 h-4 text-[var(--text-tertiary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <span>{job.application_count} applied via RemoteFlow</span>
+                <span>{job.application_count} applied via JobIQ</span>
               </div>
             )}
 
@@ -291,8 +291,8 @@ export function JobCard({
         </button>
       </CardContent>
 
-      {/* Footer: View Details link, Report button */}
-      <CardFooter className="flex items-center justify-between">
+      {/* Footer: View Details link, Report button - stacks on mobile */}
+      <CardFooter className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <a
           href={job.url}
           target="_blank"

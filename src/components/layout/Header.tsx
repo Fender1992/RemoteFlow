@@ -1,8 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
+import { Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { MobileMenu } from './MobileMenu'
 
 interface HeaderProps {
   user?: { email?: string; name?: string } | null
@@ -34,6 +37,7 @@ function NavLink({ href, children, isActive }: NavLinkProps) {
 export function Header({ user }: HeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const handleSignOut = async () => {
     try {
@@ -58,8 +62,8 @@ export function Header({ user }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-8">
-            <Link href={user ? '/jobs' : '/'} className="text-xl font-bold text-blue-600">
-              RemoteFlow
+            <Link href={user ? '/jobs' : '/'} className="text-xl font-bold text-[var(--primary-600)]">
+              JobIQ
             </Link>
 
             {user && (
@@ -88,7 +92,7 @@ export function Header({ user }: HeaderProps) {
                 </span>
                 <button
                   onClick={handleSignOut}
-                  className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
+                  className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200 hidden md:block"
                 >
                   Sign out
                 </button>
@@ -97,21 +101,38 @@ export function Header({ user }: HeaderProps) {
               <>
                 <Link
                   href="/login"
-                  className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
+                  className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200 hidden md:block"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/signup"
-                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors duration-200"
+                  className="text-sm bg-[var(--primary-600)] text-white px-4 py-2 rounded-lg hover:bg-[var(--primary-700)] font-medium transition-colors duration-200 hidden md:block"
                 >
                   Get Started
                 </Link>
               </>
             )}
+
+            {/* Mobile hamburger button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="touch-target flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors md:hidden"
+              aria-label="Open menu"
+            >
+              <Menu className="w-6 h-6 text-gray-600" />
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile menu */}
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        user={user}
+        onSignOut={handleSignOut}
+      />
     </header>
   )
 }

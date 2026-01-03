@@ -36,7 +36,7 @@ export async function fetchHimalayasJobs(offset = 0, limit = 100): Promise<Himal
 
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'RemoteFlow/1.0 (job aggregator)',
+      'User-Agent': 'JobIQ/1.0 (job aggregator)',
     },
     next: { revalidate: 0 },
   })

@@ -1,7 +1,7 @@
 {
-  "name": "remoteflow-extension",
+  "name": "jobiq-extension",
   "version": "1.0.0",
-  "description": "Track job applications across ATS platforms and sync with RemoteFlow",
+  "description": "Track job applications across ATS platforms and sync with JobIQ",
   "private": true,
   "type": "module",
   "scripts": {

@@ -9,14 +9,14 @@ import type {
   ShowToastPayload,
 } from '../types'
 
-console.log('[RemoteFlow] Background service worker started')
+console.log('[JobIQ] Background service worker started')
 
 // Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
   handleMessage(message, sender)
     .then(sendResponse)
     .catch((error) => {
-      console.error('[RemoteFlow] Message handler error:', error)
+      console.error('[JobIQ] Message handler error:', error)
       sendResponse({ success: false, error: error.message })
     })
 
@@ -43,7 +43,7 @@ async function handleMessage(message: Message, sender: chrome.runtime.MessageSen
         applicationUrl: payload.applicationUrl,
       })
 
-      console.log('[RemoteFlow] Session started:', sessionId)
+      console.log('[JobIQ] Session started:', sessionId)
       return { success: true, sessionId }
     }
 
@@ -56,17 +56,17 @@ async function handleMessage(message: Message, sender: chrome.runtime.MessageSen
         chrome.tabs.sendMessage(tabId, {
           type: 'SHOW_TOAST',
           payload: {
-            message: '✓ Application tracked in RemoteFlow!',
+            message: '✓ Application tracked in JobIQ!',
             type: 'success',
             action: {
               label: 'View',
-              url: 'https://remoteflow.io/saved',
+              url: 'https://jobiq.careers/saved',
             },
           } as ShowToastPayload,
         })
       }
 
-      console.log('[RemoteFlow] Session submitted:', payload.sessionId, result)
+      console.log('[JobIQ] Session submitted:', payload.sessionId, result)
       return result
     }
 
@@ -101,23 +101,23 @@ async function handleMessage(message: Message, sender: chrome.runtime.MessageSen
     }
 
     default:
-      console.warn('[RemoteFlow] Unknown message type:', message.type)
+      console.warn('[JobIQ] Unknown message type:', message.type)
       return { success: false, error: 'Unknown message type' }
   }
 }
 
 // Handle extension icon click when popup is disabled
 chrome.action.onClicked.addListener((tab) => {
-  // Open RemoteFlow in a new tab
-  chrome.tabs.create({ url: 'https://remoteflow.io/saved' })
+  // Open JobIQ in a new tab
+  chrome.tabs.create({ url: 'https://jobiq.careers/saved' })
 })
 
 // Log when extension is installed or updated
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[RemoteFlow] Extension installed:', details.reason)
+  console.log('[JobIQ] Extension installed:', details.reason)
 
   if (details.reason === 'install') {
     // Open onboarding page on first install
-    chrome.tabs.create({ url: 'https://remoteflow.io/extension-welcome' })
+    chrome.tabs.create({ url: 'https://jobiq.careers/extension-welcome' })
   }
 })

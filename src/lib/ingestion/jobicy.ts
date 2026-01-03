@@ -42,7 +42,7 @@ export async function fetchJobicyJobs(industry?: string): Promise<JobicyJob[]> {
     : `${JOBICY_API_URL}?count=100`
 
   const response = await fetch(url, {
-    headers: { 'User-Agent': 'RemoteFlow/1.0' },
+    headers: { 'User-Agent': 'JobIQ/1.0' },
     next: { revalidate: 0 },
   })
 

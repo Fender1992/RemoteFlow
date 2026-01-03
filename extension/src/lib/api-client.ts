@@ -1,4 +1,4 @@
-import { REMOTEFLOW_API_URL } from './constants'
+import { JOBIQ_API_URL } from './constants'
 import { getSessionFromCookies } from './supabase-extension'
 import type { AtsType, DetectionMethod } from '../types'
 
@@ -47,9 +47,9 @@ interface CheckUrlResponse {
 }
 
 /**
- * RemoteFlow API client for extension
+ * JobIQ API client for extension
  */
-export class RemoteFlowAPI {
+export class JobIQAPI {
   private async getAccessToken(): Promise<string | null> {
     const session = await getSessionFromCookies()
     return session?.access_token ?? null
@@ -66,7 +66,7 @@ export class RemoteFlowAPI {
     }
 
     try {
-      const response = await fetch(`${REMOTEFLOW_API_URL}${endpoint}`, {
+      const response = await fetch(`${JOBIQ_API_URL}${endpoint}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export class RemoteFlowAPI {
       const data = await response.json()
       return { data, error: null }
     } catch (error) {
-      console.error('[RemoteFlow API] Request failed:', error)
+      console.error('[JobIQ API] Request failed:', error)
       return { data: null, error: (error as Error).message }
     }
   }
@@ -113,7 +113,7 @@ export class RemoteFlowAPI {
     )
 
     if (error) {
-      console.error('[RemoteFlow API] Check URL failed:', error)
+      console.error('[JobIQ API] Check URL failed:', error)
       return null
     }
 
@@ -129,7 +129,7 @@ export class RemoteFlowAPI {
     )
 
     if (error || !data) {
-      console.error('[RemoteFlow API] Get saved jobs failed:', error)
+      console.error('[JobIQ API] Get saved jobs failed:', error)
       return []
     }
 
@@ -137,4 +137,4 @@ export class RemoteFlowAPI {
   }
 }
 
-export const api = new RemoteFlowAPI()
+export const api = new JobIQAPI()

@@ -204,7 +204,7 @@ export function SavedJobsClient({ initialSavedJobs }: SavedJobsClientProps) {
       </div>
 
       {/* Status tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="horizontal-scroll mb-6">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
@@ -251,7 +251,7 @@ export function SavedJobsClient({ initialSavedJobs }: SavedJobsClientProps) {
               />
 
               {/* Status controls */}
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
                 <Badge
                   variant={
                     savedJob.status === 'applied'
@@ -266,7 +266,7 @@ export function SavedJobsClient({ initialSavedJobs }: SavedJobsClientProps) {
                   {savedJob.status.charAt(0).toUpperCase() + savedJob.status.slice(1)}
                 </Badge>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   {savedJob.status === 'saved' && (
                     <Button
                       variant="secondary"

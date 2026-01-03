@@ -62,7 +62,7 @@ function parseRSSItem(itemXml: string): WWRJob | null {
 export async function fetchWWRJobs(): Promise<WWRJob[]> {
   const response = await fetch(WWR_RSS_URL, {
     headers: {
-      'User-Agent': 'RemoteFlow/1.0 (job aggregator)',
+      'User-Agent': 'JobIQ/1.0 (job aggregator)',
     },
     next: { revalidate: 0 },
   })

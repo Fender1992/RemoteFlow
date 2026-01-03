@@ -29,6 +29,6 @@ export async function sendWelcomeEmail(
   console.log('=== WELCOME EMAIL (STUBBED) ===')
   console.log(`To: ${toEmail}`)
   console.log(`User: ${userName || 'User'}`)
-  console.log('Message: Welcome to RemoteFlow! Start exploring remote jobs.')
+  console.log('Message: Welcome to JobIQ! Start exploring jobs and make informed decisions.')
   console.log('=== END WELCOME EMAIL ===')
 }

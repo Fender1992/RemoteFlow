@@ -1,14 +1,14 @@
 import { createClient, type Session, type User } from '@supabase/supabase-js'
-import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_PROJECT_REF, REMOTEFLOW_DOMAIN } from './constants'
+import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_PROJECT_REF, JOBIQ_DOMAIN } from './constants'
 
 /**
- * Get session from RemoteFlow cookies (session sharing)
+ * Get session from JobIQ cookies (session sharing)
  */
 export async function getSessionFromCookies(): Promise<Session | null> {
   try {
-    // Get all cookies from remoteflow.io domain
+    // Get all cookies from jobiq.careers domain
     const cookies = await chrome.cookies.getAll({
-      domain: REMOTEFLOW_DOMAIN,
+      domain: JOBIQ_DOMAIN,
     })
 
     // Supabase stores session in chunks: sb-<ref>-auth-token.0, sb-<ref>-auth-token.1, etc.
@@ -38,13 +38,13 @@ export async function getSessionFromCookies(): Promise<Session | null> {
 
     // Validate the session is not expired
     if (session.expires_at && session.expires_at * 1000 < Date.now()) {
-      console.log('[RemoteFlow] Session expired')
+      console.log('[JobIQ] Session expired')
       return null
     }
 
     return session
   } catch (error) {
-    console.error('[RemoteFlow] Failed to get session from cookies:', error)
+    console.error('[JobIQ] Failed to get session from cookies:', error)
     return null
   }
 }
@@ -69,13 +69,13 @@ export async function validateSession(session: Session): Promise<User | null> {
     const { data, error } = await supabase.auth.getUser()
 
     if (error || !data.user) {
-      console.log('[RemoteFlow] Session validation failed:', error?.message)
+      console.log('[JobIQ] Session validation failed:', error?.message)
       return null
     }
 
     return data.user
   } catch (error) {
-    console.error('[RemoteFlow] Session validation error:', error)
+    console.error('[JobIQ] Session validation error:', error)
     return null
   }
 }

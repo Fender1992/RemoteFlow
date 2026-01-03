@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { REMOTEFLOW_URL } from '../lib/constants'
+import { JOBIQ_URL } from '../lib/constants'
 
 interface AuthStatus {
   authenticated: boolean
@@ -36,13 +36,13 @@ export default function App() {
     })
   }, [])
 
-  const handleOpenRemoteFlow = () => {
-    chrome.tabs.create({ url: `${REMOTEFLOW_URL}/saved` })
+  const handleOpenJobIQ = () => {
+    chrome.tabs.create({ url: `${JOBIQ_URL}/saved` })
     window.close()
   }
 
   const handleSignIn = () => {
-    chrome.tabs.create({ url: `${REMOTEFLOW_URL}/login` })
+    chrome.tabs.create({ url: `${JOBIQ_URL}/login` })
     window.close()
   }
 
@@ -62,10 +62,10 @@ export default function App() {
       <header className="popup-header">
         <img
           src="/icons/icon48.svg"
-          alt="RemoteFlow"
+          alt="JobIQ"
           className="popup-logo"
         />
-        <h1 className="popup-title">RemoteFlow</h1>
+        <h1 className="popup-title">JobIQ</h1>
       </header>
 
       {/* Auth Section */}
@@ -86,12 +86,12 @@ export default function App() {
         )}
 
         {authStatus?.authenticated ? (
-          <button className="btn btn-primary" onClick={handleOpenRemoteFlow}>
-            Open RemoteFlow
+          <button className="btn btn-primary" onClick={handleOpenJobIQ}>
+            Open JobIQ
           </button>
         ) : (
           <button className="btn btn-primary" onClick={handleSignIn}>
-            Sign in to RemoteFlow
+            Sign in to JobIQ
           </button>
         )}
       </section>
@@ -106,17 +106,17 @@ export default function App() {
       {/* Footer */}
       <footer className="popup-footer">
         <a
-          href={REMOTEFLOW_URL}
+          href={JOBIQ_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="footer-link"
           onClick={(e) => {
             e.preventDefault()
-            chrome.tabs.create({ url: REMOTEFLOW_URL })
+            chrome.tabs.create({ url: JOBIQ_URL })
             window.close()
           }}
         >
-          remoteflow.io
+          jobiq.careers
         </a>
       </footer>
     </div>

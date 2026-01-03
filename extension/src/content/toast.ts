@@ -20,35 +20,35 @@ export function showToast(options: ShowToastPayload): void {
   const duration = 5000
 
   // Get or create container
-  let container = document.getElementById('remoteflow-toast-container')
+  let container = document.getElementById('jobiq-toast-container')
   if (!container) {
     container = document.createElement('div')
-    container.id = 'remoteflow-toast-container'
+    container.id = 'jobiq-toast-container'
     document.body.appendChild(container)
   }
 
   // Create toast element
   const toast = document.createElement('div')
-  toast.className = `remoteflow-toast remoteflow-toast--${type}`
+  toast.className = `jobiq-toast jobiq-toast--${type}`
 
   toast.innerHTML = `
-    <div class="remoteflow-toast__icon">${ICONS[type]}</div>
-    <div class="remoteflow-toast__content">
-      <p class="remoteflow-toast__message">${escapeHtml(message)}</p>
-      ${action ? `<a href="${action.url}" target="_blank" class="remoteflow-toast__action">${escapeHtml(action.label)}</a>` : ''}
+    <div class="jobiq-toast__icon">${ICONS[type]}</div>
+    <div class="jobiq-toast__content">
+      <p class="jobiq-toast__message">${escapeHtml(message)}</p>
+      ${action ? `<a href="${action.url}" target="_blank" class="jobiq-toast__action">${escapeHtml(action.label)}</a>` : ''}
     </div>
-    <button class="remoteflow-toast__close" aria-label="Close">&times;</button>
+    <button class="jobiq-toast__close" aria-label="Close">&times;</button>
   `
 
   container.appendChild(toast)
 
   // Add close handler
-  const closeBtn = toast.querySelector('.remoteflow-toast__close')
+  const closeBtn = toast.querySelector('.jobiq-toast__close')
   closeBtn?.addEventListener('click', () => hideToast(toast))
 
   // Animate in
   requestAnimationFrame(() => {
-    toast.classList.add('remoteflow-toast--visible')
+    toast.classList.add('jobiq-toast--visible')
   })
 
   // Auto dismiss
@@ -61,14 +61,14 @@ export function showToast(options: ShowToastPayload): void {
  * Hide a toast with animation
  */
 function hideToast(toast: HTMLElement): void {
-  toast.classList.add('remoteflow-toast--hiding')
-  toast.classList.remove('remoteflow-toast--visible')
+  toast.classList.add('jobiq-toast--hiding')
+  toast.classList.remove('jobiq-toast--visible')
 
   setTimeout(() => {
     toast.remove()
 
     // Remove container if empty
-    const container = document.getElementById('remoteflow-toast-container')
+    const container = document.getElementById('jobiq-toast-container')
     if (container && container.children.length === 0) {
       container.remove()
     }

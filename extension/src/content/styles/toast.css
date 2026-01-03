@@ -1,6 +1,6 @@
-/* RemoteFlow Toast Notification Styles */
+/* JobIQ Toast Notification Styles */
 
-#remoteflow-toast-container {
+#jobiq-toast-container {
   position: fixed;
   bottom: 24px;
   right: 24px;
@@ -11,7 +11,7 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
-.remoteflow-toast {
+.jobiq-toast {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -25,29 +25,29 @@
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-.remoteflow-toast--visible {
+.jobiq-toast--visible {
   transform: translateX(0);
   opacity: 1;
 }
 
-.remoteflow-toast--hiding {
+.jobiq-toast--hiding {
   transform: translateX(120%);
   opacity: 0;
 }
 
-.remoteflow-toast--success {
+.jobiq-toast--success {
   border-left: 4px solid #22c55e;
 }
 
-.remoteflow-toast--info {
+.jobiq-toast--info {
   border-left: 4px solid #3b82f6;
 }
 
-.remoteflow-toast--error {
+.jobiq-toast--error {
   border-left: 4px solid #ef4444;
 }
 
-.remoteflow-toast__icon {
+.jobiq-toast__icon {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
@@ -56,36 +56,36 @@
   justify-content: center;
 }
 
-.remoteflow-toast__icon svg {
+.jobiq-toast__icon svg {
   width: 20px;
   height: 20px;
 }
 
-.remoteflow-toast--success .remoteflow-toast__icon svg {
+.jobiq-toast--success .jobiq-toast__icon svg {
   color: #22c55e;
 }
 
-.remoteflow-toast--info .remoteflow-toast__icon svg {
+.jobiq-toast--info .jobiq-toast__icon svg {
   color: #3b82f6;
 }
 
-.remoteflow-toast--error .remoteflow-toast__icon svg {
+.jobiq-toast--error .jobiq-toast__icon svg {
   color: #ef4444;
 }
 
-.remoteflow-toast__content {
+.jobiq-toast__content {
   flex: 1;
   min-width: 0;
 }
 
-.remoteflow-toast__message {
+.jobiq-toast__message {
   color: #ffffff;
   font-size: 14px;
   line-height: 1.4;
   margin: 0;
 }
 
-.remoteflow-toast__action {
+.jobiq-toast__action {
   display: inline-block;
   background: transparent;
   border: none;
@@ -99,12 +99,12 @@
   transition: color 0.2s;
 }
 
-.remoteflow-toast__action:hover {
+.jobiq-toast__action:hover {
   color: #93c5fd;
   text-decoration: underline;
 }
 
-.remoteflow-toast__close {
+.jobiq-toast__close {
   background: transparent;
   border: none;
   color: #6b7280;
@@ -116,12 +116,12 @@
   transition: color 0.2s;
 }
 
-.remoteflow-toast__close:hover {
+.jobiq-toast__close:hover {
   color: #9ca3af;
 }
 
-/* RemoteFlow branding */
-.remoteflow-toast__brand {
+/* JobIQ branding */
+.jobiq-toast__brand {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -130,13 +130,13 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.remoteflow-toast__brand-logo {
+.jobiq-toast__brand-logo {
   width: 16px;
   height: 16px;
   border-radius: 4px;
 }
 
-.remoteflow-toast__brand-text {
+.jobiq-toast__brand-text {
   color: #6b7280;
   font-size: 11px;
 }

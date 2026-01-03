@@ -1,5 +1,5 @@
 {
-  "name": "remoteflow",
+  "name": "jobiq",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,6 +12,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "clsx": "^2.1.1",
+    "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "postgres": "^3.4.7",
     "react": "19.2.3",

@@ -113,10 +113,18 @@ export function ReportJobModal({ isOpen, onClose, jobId, jobTitle }: ReportJobMo
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:bg-black/50"
       onClick={handleOverlayClick}
     >
-      <div className="w-full max-w-md mx-4 bg-white rounded-lg shadow-xl">
+      <div
+        className="w-full fixed inset-x-0 bottom-0 rounded-t-2xl sm:static sm:max-w-md sm:mx-4 sm:rounded-lg bg-white shadow-xl"
+        style={{ paddingBottom: 'calc(var(--safe-area-bottom, 0px) + 1rem)' }}
+      >
+        {/* Drag indicator handle for mobile */}
+        <div className="flex justify-center pt-3 pb-2 sm:hidden">
+          <div className="h-1 w-12 rounded-full bg-gray-300" />
+        </div>
+
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Report Job</h2>

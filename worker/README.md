@@ -1,4 +1,4 @@
-# RemoteFlow Import Worker
+# JobIQ Import Worker
 
 Modal.com serverless worker that uses Claude Computer Use to browse job boards and extract listings.
 
@@ -13,7 +13,7 @@ modal setup
 
 ### 2. Create Secrets in Modal Dashboard
 
-Go to [modal.com/secrets](https://modal.com/secrets) and create a secret named `remoteflow-secrets`:
+Go to [modal.com/secrets](https://modal.com/secrets) and create a secret named `jobiq-secrets`:
 
 ```
 SUPABASE_URL=https://tzwvagdjmtxsxkyceqoj.supabase.co
@@ -33,7 +33,7 @@ modal deploy modal_import_worker.py
 After deployment, Modal will show the webhook URL. It will look like:
 
 ```
-https://your-username--remoteflow-import-worker-webhook.modal.run
+https://your-username--jobiq-import-worker-webhook.modal.run
 ```
 
 ### 5. Configure Next.js
@@ -41,7 +41,7 @@ https://your-username--remoteflow-import-worker-webhook.modal.run
 Add to `.env.local`:
 
 ```
-IMPORT_WORKER_WEBHOOK_URL=https://your-username--remoteflow-import-worker-webhook.modal.run
+IMPORT_WORKER_WEBHOOK_URL=https://your-username--jobiq-import-worker-webhook.modal.run
 ```
 
 ## Endpoints
@@ -51,7 +51,7 @@ IMPORT_WORKER_WEBHOOK_URL=https://your-username--remoteflow-import-worker-webhoo
 
 ## How It Works
 
-1. User clicks "Find Jobs" in RemoteFlow UI
+1. User clicks "Find Jobs" in JobIQ UI
 2. Next.js API creates import session in Supabase
 3. Next.js calls this worker's webhook with `session_id`
 4. Worker spawns async job processing
@@ -73,5 +73,5 @@ modal run modal_import_worker.py
 View logs in Modal dashboard or:
 
 ```bash
-modal logs remoteflow-import-worker
+modal logs jobiq-import-worker
 ```

@@ -1,6 +1,6 @@
-// RemoteFlow API configuration
-export const REMOTEFLOW_URL = 'https://remoteflow.io'
-export const REMOTEFLOW_API_URL = 'https://remoteflow.io/api'
+// JobIQ API configuration
+export const JOBIQ_URL = 'https://jobiq.careers'
+export const JOBIQ_API_URL = 'https://jobiq.careers/api'
 
 // Supabase configuration (same as main app)
 export const SUPABASE_URL = 'https://tzwvagdjmtxsxkyceqoj.supabase.co'
@@ -10,7 +10,7 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const SUPABASE_PROJECT_REF = 'tzwvagdjmtxsxkyceqoj'
 
 // Cookie domain for session sharing
-export const REMOTEFLOW_DOMAIN = 'remoteflow.io'
+export const JOBIQ_DOMAIN = 'jobiq.careers'
 
 // Session timeout (30 minutes of inactivity)
 export const SESSION_TIMEOUT_MS = 30 * 60 * 1000

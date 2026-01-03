@@ -26,7 +26,7 @@ const REMOTEOK_API_URL = 'https://remoteok.com/api'
 export async function fetchRemoteOKJobs(): Promise<RemoteOKJob[]> {
   const response = await fetch(REMOTEOK_API_URL, {
     headers: {
-      'User-Agent': 'RemoteFlow/1.0 (job aggregator)',
+      'User-Agent': 'JobIQ/1.0 (job aggregator)',
     },
     next: { revalidate: 0 },
   })

@@ -120,6 +120,6 @@ export async function POST(
 
   return NextResponse.json({
     success: true,
-    message: 'Report submitted. Thank you for helping keep RemoteFlow clean.',
+    message: 'Report submitted. Thank you for helping keep JobIQ clean.',
   })
 }

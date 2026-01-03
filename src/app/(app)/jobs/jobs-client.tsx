@@ -6,7 +6,9 @@ import { JobList } from '@/components/jobs/JobList'
 import { JobFilters } from '@/components/jobs/JobFilters'
 import { JobSearch } from '@/components/jobs/JobSearch'
 import { JobCardSkeletonList } from '@/components/jobs/JobCardSkeleton'
+import { FilterDrawer, FilterFAB } from '@/components/jobs/FilterDrawer'
 import { Button } from '@/components/ui/Button'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import type { Job } from '@/types'
 
 interface JobsClientProps {
@@ -28,6 +30,8 @@ function JobsClientInner({
   const searchParams = useSearchParams()
   const [jobs] = useState(initialJobs)
   const [saved, setSaved] = useState(initialSavedJobs)
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+  const isMobile = useIsMobile()
 
   const totalPages = Math.ceil(totalJobs / pageSize)
 
@@ -92,8 +96,8 @@ function JobsClientInner({
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Filters sidebar */}
-        <aside className="lg:w-64 flex-shrink-0">
+        {/* Filters sidebar - hidden on mobile */}
+        <aside className="hidden lg:block lg:w-64 flex-shrink-0">
           <Suspense fallback={<div className="p-4 bg-white rounded-lg border">Loading filters...</div>}>
             <JobFilters />
           </Suspense>
@@ -141,6 +145,24 @@ function JobsClientInner({
           )}
         </div>
       </div>
+
+      {/* Mobile filter FAB and drawer */}
+      {isMobile && (
+        <>
+          <FilterFAB
+            onClick={() => setIsFilterDrawerOpen(true)}
+            hasFilters={searchParams.toString().length > 0}
+          />
+          <FilterDrawer
+            isOpen={isFilterDrawerOpen}
+            onClose={() => setIsFilterDrawerOpen(false)}
+            onClearFilters={() => router.push('/jobs')}
+            hasFilters={searchParams.toString().length > 0}
+          >
+            <JobFilters />
+          </FilterDrawer>
+        </>
+      )}
     </div>
   )
 }

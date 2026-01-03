@@ -14,7 +14,7 @@ export default function LandingPage() {
             <span className="block text-blue-600">Remote Job</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
-            RemoteFlow aggregates remote jobs from top job boards so you can find the perfect
+            JobIQ aggregates remote jobs from top job boards so you can find the perfect
             opportunity. Save jobs, track applications, and never miss a deadline.
           </p>
           <div className="mt-10 flex justify-center gap-4">
@@ -96,7 +96,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500">
-          <p>&copy; {new Date().getFullYear()} RemoteFlow. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} JobIQ. All rights reserved.</p>
         </div>
       </footer>
     </div>

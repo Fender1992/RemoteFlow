@@ -5,7 +5,7 @@ const REMOTIVE_API_URL = 'https://remotive.com/api/remote-jobs'
 export async function fetchRemotiveJobs(): Promise<RemotiveJob[]> {
   const response = await fetch(REMOTIVE_API_URL, {
     headers: {
-      'User-Agent': 'RemoteFlow/1.0 (job aggregator)',
+      'User-Agent': 'JobIQ/1.0 (job aggregator)',
     },
     next: { revalidate: 0 },
   })
@@ -63,7 +63,7 @@ export async function fetchAllRemotiveJobs(): Promise<RemotiveJob[]> {
   for (const category of categories) {
     try {
       const response = await fetch(`${REMOTIVE_API_URL}?category=${category}`, {
-        headers: { 'User-Agent': 'RemoteFlow/1.0' },
+        headers: { 'User-Agent': 'JobIQ/1.0' },
       })
 
       if (response.ok) {

@@ -1,5 +1,5 @@
 """
-RemoteFlow Job Import Worker
+JobIQ Job Import Worker
 
 A Modal.com serverless worker that uses Claude Computer Use to browse job boards
 and extract job listings. Triggered by webhook from Next.js API.
@@ -16,7 +16,7 @@ from typing import Optional
 from urllib.parse import urlencode, quote_plus
 
 # Modal app configuration
-app = modal.App("remoteflow-import-worker")
+app = modal.App("jobiq-import-worker")
 
 # Build image with required dependencies
 image = modal.Image.debian_slim(python_version="3.11").pip_install(
@@ -585,7 +585,7 @@ def save_jobs_to_database(
 @app.function(
     image=image,
     timeout=900,  # 15 minutes
-    secrets=[modal.Secret.from_name("remoteflow-secrets")],
+    secrets=[modal.Secret.from_name("jobiq-secrets")],
 )
 def process_import(session_id: str, user_api_key: Optional[str] = None):
     """
@@ -759,7 +759,7 @@ def process_import(session_id: str, user_api_key: Optional[str] = None):
 # =============================================================================
 
 
-@app.function(image=image, secrets=[modal.Secret.from_name("remoteflow-secrets")])
+@app.function(image=image, secrets=[modal.Secret.from_name("jobiq-secrets")])
 @modal.fastapi_endpoint(method="POST")
 async def webhook(request: dict):
     """
@@ -796,7 +796,7 @@ async def webhook(request: dict):
 @modal.fastapi_endpoint(method="GET")
 async def health():
     """Health check endpoint."""
-    return {"status": "ok", "service": "remoteflow-import-worker"}
+    return {"status": "ok", "service": "jobiq-import-worker"}
 
 
 # =============================================================================
@@ -807,7 +807,7 @@ async def health():
 @app.local_entrypoint()
 def main():
     """Local testing entrypoint."""
-    print("RemoteFlow Import Worker")
+    print("JobIQ Import Worker")
     print("Deploy with: modal deploy worker/modal_import_worker.py")
-    print("Test webhook at: https://remoteflow--webhook.modal.run")
+    print("Test webhook at: https://jobiq--webhook.modal.run")
 

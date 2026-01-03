@@ -27,27 +27,27 @@ class ContentScript {
     this.atsType = this.orchestrator.initialize()
 
     if (!this.atsType) {
-      console.debug('[RemoteFlow] Not on a recognized ATS page')
+      console.debug('[JobIQ] Not on a recognized ATS page')
       return
     }
 
-    console.debug(`[RemoteFlow] Detected ATS: ${this.atsType}`)
+    console.debug(`[JobIQ] Detected ATS: ${this.atsType}`)
 
     // Check if user is authenticated
     const authStatus = await this.checkAuth()
     if (!authStatus.authenticated) {
-      console.debug('[RemoteFlow] User not authenticated')
+      console.debug('[JobIQ] User not authenticated')
       return
     }
 
     // Check if this URL matches a saved job
     const urlCheck = await this.checkUrl(window.location.href)
     if (!urlCheck.found) {
-      console.debug('[RemoteFlow] URL does not match any saved jobs')
+      console.debug('[JobIQ] URL does not match any saved jobs')
       return
     }
 
-    console.debug('[RemoteFlow] Found saved job:', urlCheck.job?.jobTitle)
+    console.debug('[JobIQ] Found saved job:', urlCheck.job?.jobTitle)
 
     // Start tracking session
     await this.startSession()
@@ -126,7 +126,7 @@ class ContentScript {
     }
     atsType: AtsType
   }): Promise<void> {
-    console.debug('[RemoteFlow] Submission detected:', result)
+    console.debug('[JobIQ] Submission detected:', result)
 
     const timeSpentSeconds = this.sessionStartTime
       ? Math.round((Date.now() - this.sessionStartTime) / 1000)
@@ -148,15 +148,15 @@ class ContentScript {
         if (response?.success) {
           // Show success toast
           showToast({
-            message: 'Application tracked in RemoteFlow!',
+            message: 'Application tracked in JobIQ!',
             type: 'success',
             action: {
               label: 'View saved jobs',
-              url: 'https://remoteflow.io/saved',
+              url: 'https://jobiq.careers/saved',
             },
           })
         } else if (response?.error) {
-          console.error('[RemoteFlow] Failed to track submission:', response.error)
+          console.error('[JobIQ] Failed to track submission:', response.error)
           showToast({
             message: 'Failed to track application',
             type: 'error',

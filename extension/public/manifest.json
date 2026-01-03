@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "RemoteFlow - Application Tracker",
+  "name": "JobIQ - Application Tracker",
   "version": "1.0.0",
-  "description": "Automatically track your job applications across ATS platforms and sync with RemoteFlow",
+  "description": "Automatically track your job applications across ATS platforms and sync with JobIQ",
 
   "permissions": [
     "storage",
@@ -12,7 +12,7 @@
   ],
 
   "host_permissions": [
-    "https://remoteflow.io/*",
+    "https://jobiq.careers/*",
     "https://*.supabase.co/*",
     "*://boards.greenhouse.io/*",
     "*://jobs.greenhouse.io/*",

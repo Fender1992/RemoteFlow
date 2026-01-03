@@ -193,7 +193,7 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
     >
       {/* Sliding panel */}
       <div
-        className="w-full max-w-md bg-white shadow-xl flex flex-col animate-slide-in-right"
+        className="w-full h-full md:h-auto md:max-w-md bg-white shadow-xl flex flex-col animate-slide-in-right"
         style={{
           animation: 'slideInRight 0.2s ease-out',
         }}
@@ -201,6 +201,15 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
+            <button
+              onClick={onClose}
+              className="md:hidden p-1 text-gray-400 hover:text-gray-600 rounded -ml-1"
+              disabled={isLoading}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
             <div className="flex-1 min-w-0 mr-3">
               <h2 className="text-sm font-semibold text-gray-900 truncate">
                 Ask about this job
@@ -211,7 +220,7 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
             </div>
             <button
               onClick={onClose}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded"
+              className="hidden md:block p-1 text-gray-400 hover:text-gray-600 rounded"
               disabled={isLoading}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,7 +330,7 @@ export function JobChatPanel({ isOpen, onClose, job }: JobChatPanelProps) {
         </div>
 
         {/* Input area */}
-        <div className="px-4 py-3 border-t border-gray-200 bg-white">
+        <div className="px-4 py-3 border-t border-gray-200 bg-white" style={{ paddingBottom: 'calc(var(--safe-area-bottom, 0px) + 0.75rem)' }}>
           <div className="flex gap-2">
             <input
               ref={inputRef}

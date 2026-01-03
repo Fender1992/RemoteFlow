@@ -104,7 +104,7 @@ export function ImportClient({ preferences, recentSessions }: ImportClientProps)
         </div>
 
         {/* Headline */}
-        <h1 className="text-4xl font-bold text-[var(--text-primary)]">
+        <h1 className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
           Find Jobs For Me
         </h1>
 
@@ -172,11 +172,11 @@ export function ImportClient({ preferences, recentSessions }: ImportClientProps)
                 {/* Site Logos Row */}
                 <div className="space-y-2 pt-2">
                   <p className="text-xs text-[var(--text-tertiary)]">Searching across</p>
-                  <div className="flex justify-center gap-3">
+                  <div className="horizontal-scroll justify-center">
                     {enabledSites.map((site) => {
                       const Logo = SiteLogos[site as keyof typeof SiteLogos]
                       return Logo ? (
-                        <div key={site} className="group relative">
+                        <div key={site} className="group relative flex-shrink-0">
                           <Logo />
                           <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity capitalize whitespace-nowrap">
                             {site}

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RemoteFlow - Remote Job Search Made Easy",
-  description: "Find and track remote job opportunities from top companies. One-click import from major job boards.",
+  title: "JobIQ - Know Before You Apply",
+  description: "Find and track job opportunities from top companies. Make informed decisions with JobIQ's intelligent job matching.",
 };
 
 export default function RootLayout({
