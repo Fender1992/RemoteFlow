@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/update-reputation",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/collect-snapshots",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/send-feedback-prompts",
+      "schedule": "0 9 * * *"
     }
   ]
 }

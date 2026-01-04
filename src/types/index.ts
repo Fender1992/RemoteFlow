@@ -76,6 +76,13 @@ export interface Job {
   application_count?: number
   avg_time_to_apply_seconds?: number | null
   application_stats_updated_at?: string | null
+  // Lifecycle tracking fields
+  first_seen_at?: string | null
+  last_seen_at?: string | null
+  removed_at?: string | null
+  days_active?: number | null
+  lifecycle_status?: 'active' | 'filled' | 'expired' | 'reposted' | 'unknown'
+  is_evergreen?: boolean
 }
 
 // Type for inserting new jobs (without auto-generated fields)
@@ -193,6 +200,16 @@ export interface CompanyReputation {
   avg_reposts_per_job: number
   score_updated_at: string | null
   created_at: string
+  // Credibility tracking fields
+  credibility_score?: number
+  credibility_grade?: string
+  avg_time_to_fill_days?: number | null
+  median_time_to_fill_days?: number | null
+  response_rate?: number | null
+  interview_rate?: number | null
+  offer_rate?: number | null
+  evergreen_job_count?: number
+  hiring_trend?: 'growing' | 'stable' | 'declining'
 }
 
 // Job signals (user feedback)
@@ -547,4 +564,74 @@ export interface CreateJobViewRequest {
   company?: string
   platform?: JobViewPlatform
   job_id?: string
+}
+
+// ============================================================================
+// Application Outcome & Feedback Types (Company Credibility System)
+// ============================================================================
+
+export type ApplicationOutcome = 'no_response' | 'rejected' | 'interview' | 'offer' | 'hired'
+export type RejectionStage = 'resume' | 'phone_screen' | 'technical' | 'onsite' | 'offer'
+export type FeedbackPromptType = 'followup_7d' | 'followup_14d' | 'followup_30d'
+export type FeedbackDeliveryMethod = 'in_app' | 'email'
+
+export interface ApplicationOutcomeRecord {
+  id: string
+  user_id: string
+  saved_job_id: string | null
+  job_id: string | null
+  company_id: string | null
+  applied_at: string | null
+  outcome_reported_at: string
+  outcome: ApplicationOutcome
+  days_to_response: number | null
+  interview_rounds: number | null
+  rejection_stage: RejectionStage | null
+  experience_rating: number | null  // 1-5
+  would_recommend: boolean | null
+  notes: string | null
+  created_at: string
+}
+
+export interface FeedbackPrompt {
+  id: string
+  user_id: string
+  saved_job_id: string
+  prompt_type: FeedbackPromptType
+  prompted_at: string
+  responded_at: string | null
+  dismissed_at: string | null
+  delivery_method: FeedbackDeliveryMethod
+  email_sent_at: string | null
+  created_at: string
+}
+
+export interface PendingFeedbackPrompt {
+  prompt_id: string
+  saved_job_id: string
+  job_title: string
+  company: string
+  applied_at: string | null
+  days_since_apply: number
+  prompt_type: FeedbackPromptType
+}
+
+export interface SubmitFeedbackRequest {
+  saved_job_id: string
+  outcome: ApplicationOutcome
+  days_to_response?: number
+  interview_rounds?: number
+  rejection_stage?: RejectionStage
+  experience_rating?: number
+  would_recommend?: boolean
+  notes?: string
+}
+
+export interface JobSnapshot {
+  id: string
+  job_id: string
+  source: string
+  snapshot_date: string
+  is_active: boolean
+  created_at: string
 }

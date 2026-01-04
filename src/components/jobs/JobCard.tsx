@@ -9,6 +9,8 @@ import { JobHealthBadge, getHealthStatus } from '@/components/jobs/JobHealthBadg
 import { ReportJobModal } from '@/components/jobs/ReportJobModal'
 import { JobChatPanel } from '@/components/jobs/JobChatPanel'
 import { MatchBadge } from '@/components/jobs/MatchBadge'
+import { CredibilityBadge } from '@/components/companies/CredibilityBadge'
+import { TimeToFillBadge } from '@/components/jobs/TimeToFillBadge'
 import type { Job, GhostFlag, Company, CompanyReputation } from '@/types'
 
 interface JobCardProps {
@@ -231,6 +233,23 @@ export function JobCard({
               showTooltip={true}
             />
 
+            {/* Company credibility grade */}
+            {companyData?.reputation?.credibility_grade && (
+              <CredibilityBadge
+                score={companyData.reputation.credibility_score ?? 0.5}
+                grade={companyData.reputation.credibility_grade}
+                size="sm"
+                showLabel={true}
+              />
+            )}
+
+            {/* Average time to fill */}
+            {companyData?.reputation?.avg_time_to_fill_days && (
+              <TimeToFillBadge
+                days={companyData.reputation.avg_time_to_fill_days}
+              />
+            )}
+
             {/* Company response rate */}
             {responseRate !== null && (
               <div className="flex items-center gap-1.5 text-sm">
@@ -240,6 +259,26 @@ export function JobCard({
                 <span className="text-[var(--text-secondary)]">
                   {Math.round(responseRate * 100)}% response rate
                 </span>
+              </div>
+            )}
+
+            {/* Days active warning */}
+            {(job.days_active ?? 0) > 60 && (
+              <div className="flex items-center gap-1.5 text-sm text-[var(--health-caution-text)]">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Posted {job.days_active}+ days ago</span>
+              </div>
+            )}
+
+            {/* Evergreen job warning */}
+            {job.is_evergreen && (
+              <div className="flex items-center gap-1.5 text-sm text-[var(--health-caution-text)]">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>Evergreen listing</span>
               </div>
             )}
 
