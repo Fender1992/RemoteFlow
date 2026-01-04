@@ -224,6 +224,107 @@ export async function POST(request: NextRequest) {
           response_rate: responseRate,
         })
 
+        // Calculate time to fill metrics from jobs with lifecycle_status = 'filled'
+        const { data: filledJobsData } = await supabase
+          .from('jobs')
+          .select('days_to_fill')
+          .eq('company_id', company.id)
+          .eq('lifecycle_status', 'filled')
+          .not('days_to_fill', 'is', null)
+
+        let avgTimeToFillDays: number | null = null
+        let medianTimeToFillDays: number | null = null
+
+        if (filledJobsData && filledJobsData.length > 0) {
+          const fillTimes = filledJobsData.map(j => j.days_to_fill).filter((d): d is number => d !== null)
+          if (fillTimes.length > 0) {
+            avgTimeToFillDays = Math.round(fillTimes.reduce((a, b) => a + b, 0) / fillTimes.length)
+            // Calculate median
+            const sorted = [...fillTimes].sort((a, b) => a - b)
+            const mid = Math.floor(sorted.length / 2)
+            medianTimeToFillDays = sorted.length % 2 !== 0
+              ? sorted[mid]
+              : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+          }
+        }
+
+        // Calculate application outcome rates from application_outcomes table
+        const { count: totalOutcomes } = await supabase
+          .from('application_outcomes')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', company.id)
+
+        const { count: responsesReceived } = await supabase
+          .from('application_outcomes')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', company.id)
+          .neq('outcome', 'no_response')
+
+        const { count: interviewCount } = await supabase
+          .from('application_outcomes')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', company.id)
+          .in('outcome', ['interview', 'offer', 'hired'])
+
+        const { count: offerCount } = await supabase
+          .from('application_outcomes')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', company.id)
+          .in('outcome', ['offer', 'hired'])
+
+        const outcomeResponseRate = totalOutcomes && totalOutcomes > 0
+          ? (responsesReceived || 0) / totalOutcomes
+          : responseRate // Fall back to existing response rate
+        const interviewRate = totalOutcomes && totalOutcomes > 0
+          ? (interviewCount || 0) / totalOutcomes
+          : 0
+        const offerRate = totalOutcomes && totalOutcomes > 0
+          ? (offerCount || 0) / totalOutcomes
+          : 0
+
+        // Count evergreen jobs
+        const { count: evergreenJobCount } = await supabase
+          .from('jobs')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', company.id)
+          .eq('is_evergreen', true)
+
+        // Calculate hiring trend (compare last 30 days vs previous 30 days)
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
+
+        const { count: recentJobs } = await supabase
+          .from('jobs')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', company.id)
+          .gte('created_at', thirtyDaysAgo.toISOString())
+
+        const { count: previousJobs } = await supabase
+          .from('jobs')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', company.id)
+          .gte('created_at', sixtyDaysAgo.toISOString())
+          .lt('created_at', thirtyDaysAgo.toISOString())
+
+        const hiringTrend = calculateHiringTrend(recentJobs || 0, previousJobs || 0)
+
+        // Calculate credibility score
+        const fillRate = totalJobs > 0 ? (jobsFilled || 0) / totalJobs : 0.5
+        const repostRate = avgRepostsPerJob > 1 ? Math.min(1, (avgRepostsPerJob - 1) / avgRepostsPerJob) : 0
+        const ghostRatio = totalJobs > 0 ? (jobsGhosted || 0) / totalJobs : 0.1
+
+        const credibilityScore = calculateCredibilityScore({
+          fillRate,
+          responseRate: outcomeResponseRate,
+          avgTimeToFillDays: avgTimeToFillDays ?? undefined,
+          repostRate,
+          ghostRatio,
+          evergreenJobCount: evergreenJobCount || 0,
+          totalJobsPosted: totalJobs,
+        })
+
+        const credibilityGrade = scoreToGrade(credibilityScore)
+
         companyMetrics.push({
           company_id: company.id,
           company_name: company.name,
@@ -232,8 +333,17 @@ export async function POST(request: NextRequest) {
           jobs_ghosted: jobsGhosted || 0,
           total_jobs: totalJobs,
           avg_reposts_per_job: Math.round(avgRepostsPerJob * 100) / 100,
-          response_rate: Math.round(responseRate * 100) / 100,
+          response_rate: Math.round(outcomeResponseRate * 100) / 100,
           reputation_score: reputationScore,
+          // Credibility metrics
+          credibility_score: credibilityScore,
+          credibility_grade: credibilityGrade,
+          avg_time_to_fill_days: avgTimeToFillDays,
+          median_time_to_fill_days: medianTimeToFillDays,
+          interview_rate: Math.round(interviewRate * 100) / 100,
+          offer_rate: Math.round(offerRate * 100) / 100,
+          evergreen_job_count: evergreenJobCount || 0,
+          hiring_trend: hiringTrend,
         })
 
         // Flag companies with low reputation for review
@@ -270,6 +380,16 @@ export async function POST(request: NextRequest) {
           jobs_ghosted: metrics.jobs_ghosted,
           avg_reposts_per_job: metrics.avg_reposts_per_job,
           score_updated_at: now.toISOString(),
+          // Credibility metrics
+          credibility_score: metrics.credibility_score,
+          credibility_grade: metrics.credibility_grade,
+          avg_time_to_fill_days: metrics.avg_time_to_fill_days,
+          median_time_to_fill_days: metrics.median_time_to_fill_days,
+          response_rate: metrics.response_rate,
+          interview_rate: metrics.interview_rate,
+          offer_rate: metrics.offer_rate,
+          evergreen_job_count: metrics.evergreen_job_count,
+          hiring_trend: metrics.hiring_trend,
         }
 
         if (existing) {
@@ -284,6 +404,7 @@ export async function POST(request: NextRequest) {
             stats.errors++
           } else {
             stats.reputationScoresUpdated++
+            stats.credibilityScoresUpdated++
           }
         } else {
           // Insert new record
@@ -296,6 +417,7 @@ export async function POST(request: NextRequest) {
             stats.errors++
           } else {
             stats.reputationScoresUpdated++
+            stats.credibilityScoresUpdated++
           }
         }
       } catch (err) {
@@ -351,7 +473,8 @@ export async function POST(request: NextRequest) {
 
     console.log('=== Reputation update complete ===')
     console.log(`Processed: ${stats.totalCompaniesProcessed}`)
-    console.log(`Updated: ${stats.reputationScoresUpdated}`)
+    console.log(`Reputation scores updated: ${stats.reputationScoresUpdated}`)
+    console.log(`Credibility scores updated: ${stats.credibilityScoresUpdated}`)
     console.log(`Flagged: ${stats.companiesFlaggedForReview}`)
     console.log(`Errors: ${stats.errors}`)
     console.log(`Duration: ${stats.durationMs}ms`)
