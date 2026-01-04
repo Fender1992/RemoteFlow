@@ -52,6 +52,17 @@ export {
   type CompanyReputation,
 } from './company-matcher'
 
+export {
+  calculateCredibilityScore,
+  scoreToGrade,
+  calculateTimeToFillScore,
+  calculateHiringTrend,
+  getRedFlags,
+  analyzeCredibility,
+  type CompanyMetrics,
+  type CredibilityResult,
+} from './credibility'
+
 // Re-export types from supabase for convenience
 import type { SupabaseClient } from '@supabase/supabase-js'
 

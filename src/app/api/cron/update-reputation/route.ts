@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { calculateCredibilityScore, scoreToGrade, calculateHiringTrend } from '@/lib/quality/credibility'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5 minutes max
@@ -7,6 +8,7 @@ export const maxDuration = 300 // 5 minutes max
 interface ReputationStats {
   totalCompaniesProcessed: number
   reputationScoresUpdated: number
+  credibilityScoresUpdated: number
   companiesFlaggedForReview: number
   errors: number
   durationMs: number
@@ -22,6 +24,15 @@ interface CompanyMetrics {
   avg_reposts_per_job: number
   response_rate: number
   reputation_score: number
+  // Credibility metrics
+  credibility_score: number
+  credibility_grade: string
+  avg_time_to_fill_days: number | null
+  median_time_to_fill_days: number | null
+  interview_rate: number
+  offer_rate: number
+  evergreen_job_count: number
+  hiring_trend: 'growing' | 'stable' | 'declining'
 }
 
 /**
@@ -103,6 +114,7 @@ export async function POST(request: NextRequest) {
   const stats: ReputationStats = {
     totalCompaniesProcessed: 0,
     reputationScoresUpdated: 0,
+    credibilityScoresUpdated: 0,
     companiesFlaggedForReview: 0,
     errors: 0,
     durationMs: 0,
