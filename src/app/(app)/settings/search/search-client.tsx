@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, X, Check } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import type { UserPreferencesExtended, JobType, ExperienceLevel, ImportSiteId } from '@/types'
+import type { UserPreferencesExtended, JobType, ExperienceLevel } from '@/types'
 
 interface SearchPreferencesClientProps {
   initialPreferences: UserPreferencesExtended
@@ -30,14 +30,6 @@ const LOCATION_OPTIONS = [
   { value: 'onsite', label: 'On-site' },
   { value: 'any', label: 'Any' },
 ] as const
-
-const IMPORT_SITES: { id: ImportSiteId; name: string }[] = [
-  { id: 'linkedin', name: 'LinkedIn' },
-  { id: 'indeed', name: 'Indeed' },
-  { id: 'glassdoor', name: 'Glassdoor' },
-  { id: 'dice', name: 'Dice' },
-  { id: 'wellfound', name: 'Wellfound' },
-]
 
 export function SearchPreferencesClient({ initialPreferences }: SearchPreferencesClientProps) {
   const [preferences, setPreferences] = useState<UserPreferencesExtended>(initialPreferences)
@@ -109,15 +101,6 @@ export function SearchPreferencesClient({ initialPreferences }: SearchPreference
       ...preferences,
       salary_range: { ...current, [field]: numValue },
     })
-    setSaved(false)
-  }
-
-  const handleSiteToggle = (siteId: ImportSiteId) => {
-    const current = preferences.enabled_sites || ['linkedin', 'indeed', 'glassdoor', 'dice', 'wellfound']
-    const newSites = current.includes(siteId)
-      ? current.filter((s) => s !== siteId)
-      : [...current, siteId]
-    setPreferences({ ...preferences, enabled_sites: newSites as ImportSiteId[] })
     setSaved(false)
   }
 
@@ -328,34 +311,6 @@ export function SearchPreferencesClient({ initialPreferences }: SearchPreference
               className="w-full px-3 py-2 border border-[var(--border-default)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)]"
             />
           </div>
-        </div>
-      </div>
-
-      {/* Import Sites */}
-      <div>
-        <label className="block text-sm font-medium text-[var(--text-primary)] mb-3">
-          Job Sites to Search
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {IMPORT_SITES.map((site) => {
-            const isEnabled = (preferences.enabled_sites || ['linkedin', 'indeed', 'glassdoor', 'dice', 'wellfound']).includes(site.id)
-            return (
-              <button
-                key={site.id}
-                onClick={() => handleSiteToggle(site.id)}
-                className={`flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
-                  isEnabled
-                    ? 'border-[var(--primary-600)] bg-[var(--primary-50)]'
-                    : 'border-[var(--border-default)] hover:border-gray-300'
-                }`}
-              >
-                <span className={isEnabled ? 'text-[var(--primary-700)] font-medium' : 'text-[var(--text-secondary)]'}>
-                  {site.name}
-                </span>
-                {isEnabled && <Check className="w-4 h-4 text-[var(--primary-600)]" />}
-              </button>
-            )
-          })}
         </div>
       </div>
 

@@ -14,42 +14,12 @@ interface ImportClientProps {
   recentSessions: ImportSession[]
 }
 
-// Site logo components
-const SiteLogos = {
-  linkedin: () => (
-    <div className="w-8 h-8 bg-[#0A66C2] rounded flex items-center justify-center">
-      <span className="text-white text-xs font-bold">in</span>
-    </div>
-  ),
-  indeed: () => (
-    <div className="w-8 h-8 bg-[#2164f3] rounded flex items-center justify-center">
-      <span className="text-white text-xs font-bold">in</span>
-    </div>
-  ),
-  glassdoor: () => (
-    <div className="w-8 h-8 bg-[#0caa41] rounded flex items-center justify-center">
-      <span className="text-white text-xs font-bold">G</span>
-    </div>
-  ),
-  dice: () => (
-    <div className="w-8 h-8 bg-[#eb1c26] rounded flex items-center justify-center">
-      <span className="text-white text-xs font-bold">D</span>
-    </div>
-  ),
-  wellfound: () => (
-    <div className="w-8 h-8 bg-black rounded flex items-center justify-center">
-      <span className="text-white text-xs font-bold">W</span>
-    </div>
-  ),
-}
-
 export function ImportClient({ preferences, recentSessions }: ImportClientProps) {
   const router = useRouter()
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
 
   const hasSearchRoles = preferences.search_roles && preferences.search_roles.length > 0
-  const enabledSites = preferences.enabled_sites || ['linkedin', 'indeed', 'glassdoor', 'dice', 'wellfound']
 
   const handleSessionStarted = (sessionId: string) => {
     setActiveSessionId(sessionId)
@@ -168,24 +138,6 @@ export function ImportClient({ preferences, recentSessions }: ImportClientProps)
                 <div className="pt-4">
                   <FindJobsButton onSessionStarted={handleSessionStarted} />
                 </div>
-
-                {/* Site Logos Row */}
-                <div className="space-y-2 pt-2">
-                  <p className="text-xs text-[var(--text-tertiary)]">Searching across</p>
-                  <div className="horizontal-scroll justify-center">
-                    {enabledSites.map((site) => {
-                      const Logo = SiteLogos[site as keyof typeof SiteLogos]
-                      return Logo ? (
-                        <div key={site} className="group relative flex-shrink-0">
-                          <Logo />
-                          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity capitalize whitespace-nowrap">
-                            {site}
-                          </span>
-                        </div>
-                      ) : null
-                    })}
-                  </div>
-                </div>
               </>
             ) : (
               <div className="space-y-4 py-4">
@@ -228,7 +180,7 @@ export function ImportClient({ preferences, recentSessions }: ImportClientProps)
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-3 gap-6">
             <div className="space-y-1">
               <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
                 Search Roles
@@ -255,14 +207,6 @@ export function ImportClient({ preferences, recentSessions }: ImportClientProps)
                 {preferences.salary_range?.min
                   ? `$${(preferences.salary_range.min / 1000).toFixed(0)}k - $${(preferences.salary_range.max! / 1000).toFixed(0)}k`
                   : 'Any'}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
-                Sites Enabled
-              </p>
-              <p className="text-sm font-medium text-[var(--text-primary)]">
-                {enabledSites.length} site{enabledSites.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
@@ -349,7 +293,7 @@ export function ImportClient({ preferences, recentSessions }: ImportClientProps)
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-5 h-5 bg-[var(--primary-100)] text-[var(--primary-700)] rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0">2</span>
-                  <span>Click &quot;Find Jobs For Me&quot; - we search LinkedIn, Indeed, Glassdoor, Dice, and Wellfound</span>
+                  <span>Click &quot;Find Jobs For Me&quot; - we search across the web for matching opportunities</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-5 h-5 bg-[var(--primary-100)] text-[var(--primary-700)] rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0">3</span>

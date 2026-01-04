@@ -96,7 +96,7 @@ function EmptyState() {
         </h2>
 
         <p className="text-[var(--text-secondary)] max-w-md mx-auto mb-8">
-          Install the RemoteFlow browser extension to automatically track jobs you view on LinkedIn, Indeed, Glassdoor, and more.
+          Install the JobIQ browser extension to automatically track jobs you view across job boards.
         </p>
 
         <div className="bg-[var(--primary-50)] rounded-lg p-6 max-w-lg mx-auto mb-8">
@@ -133,7 +133,7 @@ function EmptyState() {
 
         <Link href="/jobs">
           <Button variant="primary" size="lg">
-            Browse Jobs on RemoteFlow
+            Browse Jobs on JobIQ
           </Button>
         </Link>
       </div>
