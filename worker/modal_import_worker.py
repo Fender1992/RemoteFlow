@@ -11,145 +11,112 @@ import modal
 import os
 import json
 import re
+import base64
+import asyncio
 from datetime import datetime, timezone
 from typing import Optional
-from urllib.parse import urlencode, quote_plus
+from urllib.parse import urlencode
 
 # Modal app configuration
 app = modal.App("jobiq-import-worker")
 
-# Build image with required dependencies
-image = modal.Image.debian_slim(python_version="3.11").pip_install(
-    "anthropic>=0.40.0",
-    "supabase>=2.0.0",
-    "httpx>=0.25.0",
-    "fastapi",
+# Build image with browser automation dependencies
+image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .apt_install(
+        "wget",
+        "gnupg",
+        "libglib2.0-0",
+        "libnss3",
+        "libnspr4",
+        "libdbus-1-3",
+        "libatk1.0-0",
+        "libatk-bridge2.0-0",
+        "libcups2",
+        "libdrm2",
+        "libxkbcommon0",
+        "libxcomposite1",
+        "libxdamage1",
+        "libxfixes3",
+        "libxrandr2",
+        "libgbm1",
+        "libasound2",
+        "libpango-1.0-0",
+        "libcairo2",
+    )
+    .pip_install(
+        "anthropic>=0.40.0",
+        "supabase>=2.0.0",
+        "httpx>=0.25.0",
+        "fastapi",
+        "playwright",
+        "Pillow",
+    )
+    .run_commands(
+        "playwright install chromium",
+        "playwright install-deps chromium",
+    )
 )
 
 
 # =============================================================================
-# Site Configurations (mirrored from TypeScript)
+# Site Configurations
 # =============================================================================
 
 SITE_CONFIGS = {
     "linkedin": {
         "name": "LinkedIn",
-        "max_jobs": 50,
-        "system_prompt": """You are a job search assistant browsing LinkedIn Jobs. Your task is to navigate job search results and extract job listing data.
+        "max_jobs": 25,
+        "system_prompt": """You are a job search assistant browsing LinkedIn Jobs. Extract job listing data from what you see.
 
 Key behaviors:
-- Wait for pages to fully load before extracting (look for job cards)
 - If you see a login/signup modal, look for an X or Close button to dismiss it
-- Job cards appear on the left, clicking them loads details on the right
-- Scroll down to load more jobs if the page uses infinite scroll
-- Look for the "Show more jobs" button at the bottom to load more""",
-        "search_instructions": """
-1. Navigate to the provided search URL
-2. Wait for job listings to load (look for job cards in the left panel)
-3. If a login modal appears, dismiss it by clicking the X button
-4. For each visible job listing:
-   - Click on the job card to load its details
-   - Extract: title, company name, location, salary (if shown), posted date
-   - Note the job URL from the browser
-   - Look for "Easy Apply" badge
-5. Scroll down to load more jobs
-6. Click "Show more jobs" button if visible
-7. Stop after extracting {max_jobs} jobs or when no more are available
-8. Return all extracted jobs in the specified JSON format""",
+- Job cards appear on the left panel - each shows title, company, location
+- Scroll down to see more job listings
+- Extract data directly from visible job cards without clicking into each one""",
     },
     "indeed": {
         "name": "Indeed",
-        "max_jobs": 50,
-        "system_prompt": """You are a job search assistant browsing Indeed job listings. Your task is to navigate search results and extract job data.
+        "max_jobs": 25,
+        "system_prompt": """You are a job search assistant browsing Indeed job listings. Extract job data from visible listings.
 
 Key behaviors:
-- Jobs are listed in cards that can be clicked for more details
-- Indeed often shows salary estimates even when not provided by employer
-- Note whether salary is "Estimated" or "Employer provided"
-- Look for badges: "Urgently hiring", "Responsive employer", "Many applicants"
-- Job ID is in the URL parameter "jk"
-- Use the "Next" button at the bottom for pagination""",
-        "search_instructions": """
-1. Navigate to the provided search URL
-2. Wait for job listings to load
-3. For each job card visible:
-   - Click on the job card to expand details
-   - Extract: title, company, location, salary, posted date, job type
-   - Note any badges (Urgently hiring, etc.)
-   - Copy the job URL
-4. Use the "Next" button to go to the next page
-5. Stop after extracting {max_jobs} jobs or when no more pages
-6. Return all extracted jobs in the specified JSON format""",
+- Jobs are listed in cards with title, company, location, salary visible
+- Note if salary is "Estimated" or "Employer provided"
+- Look for badges like "Urgently hiring", "Responsive employer"
+- Scroll to see more listings""",
     },
     "glassdoor": {
         "name": "Glassdoor",
-        "max_jobs": 40,
-        "system_prompt": """You are a job search assistant browsing Glassdoor job listings. Your task is to navigate search results and extract job data.
+        "max_jobs": 20,
+        "system_prompt": """You are a job search assistant browsing Glassdoor job listings. Extract job data from visible listings.
 
 Key behaviors:
-- May show signup/login modal - look for X or "Close" button to dismiss
-- Company ratings (1-5 stars) are valuable - always extract them
-- Salary shows as estimated range
-- Job cards are clickable for more details
-- Note the company rating and review count""",
-        "search_instructions": """
-1. Navigate to the provided search URL
-2. If a signup/login modal appears, dismiss it by clicking X or Close
-3. Wait for job listings to load
-4. For each job card:
-   - Click to see full details
-   - Extract: title, company, location, salary range, company rating
-   - Note the company's star rating and review count
-   - Copy the job URL
-5. Scroll or paginate to load more jobs
-6. Stop after extracting {max_jobs} jobs
-7. Return all extracted jobs in the specified JSON format""",
+- May show signup/login modal - dismiss by clicking X or Close
+- Company ratings (stars) are valuable - extract if visible
+- Salary ranges are often shown as estimates
+- Scroll to load more jobs""",
     },
     "dice": {
         "name": "Dice",
-        "max_jobs": 50,
-        "system_prompt": """You are a job search assistant browsing Dice, a tech-focused job board. Your task is to navigate search results and extract job data.
+        "max_jobs": 25,
+        "system_prompt": """You are a job search assistant browsing Dice, a tech-focused job board. Extract job data from visible listings.
 
 Key behaviors:
 - Dice is tech-focused - most jobs have detailed skill requirements
 - Jobs are listed in cards with key details visible
-- Click into jobs for full descriptions
-- Skills/technologies are usually tagged - extract these
 - The site is generally clean with minimal pop-ups""",
-        "search_instructions": """
-1. Navigate to the provided search URL
-2. Wait for job listings to load
-3. For each job card:
-   - Click to see full details
-   - Extract: title, company, location, salary, posted date
-   - Pay special attention to skills/technologies listed
-   - Copy the job URL
-4. Scroll or paginate to load more jobs
-5. Stop after extracting {max_jobs} jobs
-6. Return all extracted jobs in the specified JSON format""",
     },
     "wellfound": {
         "name": "Wellfound",
-        "max_jobs": 40,
-        "system_prompt": """You are a job search assistant browsing Wellfound (formerly AngelList Talent), a startup-focused job board. Your task is to navigate job listings and extract data.
+        "max_jobs": 20,
+        "system_prompt": """You are a job search assistant browsing Wellfound (formerly AngelList Talent). Extract job data from visible listings.
 
 Key behaviors:
 - Startup-focused - jobs often include equity information
 - Company cards show funding stage and size
 - Salary ranges are usually displayed
-- Look for: remote policy, equity range, company stage
-- The site is generally clean and modern""",
-        "search_instructions": """
-1. Navigate to the provided search URL
-2. Wait for job listings to load
-3. For each job card:
-   - Click to see full details
-   - Extract: title, company, location, salary, equity (if shown)
-   - Note the company's funding stage and size
-   - Copy the job URL
-4. Scroll to load more jobs (infinite scroll)
-5. Stop after extracting {max_jobs} jobs
-6. Return all extracted jobs in the specified JSON format""",
+- The site uses infinite scroll""",
     },
 }
 
@@ -176,7 +143,6 @@ WELLFOUND_ROLE_SLUGS = {
 
 
 def build_linkedin_url(roles: list[str], location: str = "Remote", remote: bool = True) -> str:
-    """Build LinkedIn job search URL."""
     keywords = " ".join(roles)
     params = {
         "keywords": keywords,
@@ -189,12 +155,11 @@ def build_linkedin_url(roles: list[str], location: str = "Remote", remote: bool 
 
 
 def build_indeed_url(roles: list[str], location: str = "Remote", remote: bool = True) -> str:
-    """Build Indeed job search URL."""
     keywords = " ".join(roles)
     params = {
         "q": keywords,
         "l": "Remote" if remote else location,
-        "fromage": "3",  # Last 3 days
+        "fromage": "7",  # Last 7 days
     }
     if remote:
         params["sc"] = "0kf:attr(DSQF7);"
@@ -202,7 +167,6 @@ def build_indeed_url(roles: list[str], location: str = "Remote", remote: bool = 
 
 
 def build_glassdoor_url(roles: list[str], remote: bool = True) -> str:
-    """Build Glassdoor job search URL."""
     keywords = " ".join(roles)
     params = {
         "sc.keyword": keywords,
@@ -215,7 +179,6 @@ def build_glassdoor_url(roles: list[str], remote: bool = True) -> str:
 
 
 def build_dice_url(roles: list[str], location: str = "Remote", remote: bool = True) -> str:
-    """Build Dice job search URL."""
     keywords = " ".join(roles)
     params = {
         "q": keywords,
@@ -227,9 +190,8 @@ def build_dice_url(roles: list[str], location: str = "Remote", remote: bool = Tr
 
 
 def build_wellfound_url(roles: list[str], remote: bool = True) -> str:
-    """Build Wellfound job search URL."""
     keywords_lower = " ".join(roles).lower()
-    role_slug = "developer"  # default
+    role_slug = "developer"
 
     for keyword, slug in WELLFOUND_ROLE_SLUGS.items():
         if keyword in keywords_lower:
@@ -243,10 +205,9 @@ def build_wellfound_url(roles: list[str], remote: bool = True) -> str:
 
 
 def build_search_url(site_id: str, search_params: dict) -> str:
-    """Build search URL for a given site."""
     roles = search_params.get("roles", [])
     location = search_params.get("location", "Remote")
-    remote = search_params.get("location", "remote") == "remote"
+    remote = search_params.get("location", "remote").lower() == "remote"
 
     builders = {
         "linkedin": lambda: build_linkedin_url(roles, location, remote),
@@ -267,130 +228,353 @@ def build_search_url(site_id: str, search_params: dict) -> str:
 # =============================================================================
 
 
-def build_extraction_prompt(site_id: str, search_url: str, max_jobs: int) -> str:
-    """Build the prompt for Claude to extract jobs."""
-    config = SITE_CONFIGS.get(site_id, {})
+async def execute_computer_action(page, action: dict) -> str:
+    """Execute a computer use action on the browser page."""
+    action_type = action.get("action")
 
-    return f"""Navigate to {search_url} and extract job listings.
+    try:
+        if action_type == "screenshot":
+            # Just return - we'll take a screenshot after
+            return "Screenshot taken"
 
-{config.get('search_instructions', '').format(max_jobs=max_jobs)}
+        elif action_type == "mouse_move":
+            x = action.get("coordinate", [0, 0])[0]
+            y = action.get("coordinate", [0, 0])[1]
+            await page.mouse.move(x, y)
+            return f"Moved mouse to ({x}, {y})"
 
-For each job, extract:
-- title: The job title
-- company: The company name
-- location: The location (e.g., "Remote", "San Francisco, CA")
-- salary: Salary range if shown (e.g., "$120,000 - $150,000/year")
-- posted_date: When posted (e.g., "2 days ago", "1 week ago")
-- url: The full URL to the job listing
-- description_preview: First 500 characters of the job description
-- remote_type: One of "fully_remote", "hybrid", "onsite", or "unknown"
-- employment_type: One of "full_time", "part_time", "contract", or "unknown"
+        elif action_type == "left_click":
+            x = action.get("coordinate", [0, 0])[0]
+            y = action.get("coordinate", [0, 0])[1]
+            await page.mouse.click(x, y)
+            await asyncio.sleep(0.5)  # Wait for any navigation/loading
+            return f"Clicked at ({x}, {y})"
 
-Return your findings as a JSON object with this structure:
-{{
-  "jobs": [
-    {{
-      "title": "...",
-      "company": "...",
-      "location": "...",
-      "salary": "...",
-      "posted_date": "...",
-      "url": "...",
-      "description_preview": "...",
-      "remote_type": "...",
-      "employment_type": "..."
-    }}
-  ],
-  "metadata": {{
-    "site": "{site_id}",
-    "search_url": "{search_url}",
-    "jobs_extracted": 0,
-    "extraction_notes": "Any issues encountered"
-  }}
-}}
+        elif action_type == "left_click_drag":
+            start = action.get("start_coordinate", [0, 0])
+            end = action.get("coordinate", [0, 0])
+            await page.mouse.move(start[0], start[1])
+            await page.mouse.down()
+            await page.mouse.move(end[0], end[1])
+            await page.mouse.up()
+            return f"Dragged from {start} to {end}"
 
-Stop after extracting {max_jobs} jobs or when no more are available.
-Return ONLY the JSON object, no other text."""
+        elif action_type == "right_click":
+            x = action.get("coordinate", [0, 0])[0]
+            y = action.get("coordinate", [0, 0])[1]
+            await page.mouse.click(x, y, button="right")
+            return f"Right-clicked at ({x}, {y})"
+
+        elif action_type == "double_click":
+            x = action.get("coordinate", [0, 0])[0]
+            y = action.get("coordinate", [0, 0])[1]
+            await page.mouse.dblclick(x, y)
+            return f"Double-clicked at ({x}, {y})"
+
+        elif action_type == "scroll":
+            x = action.get("coordinate", [640, 400])[0]
+            y = action.get("coordinate", [640, 400])[1]
+            direction = action.get("direction", "down")
+            amount = action.get("amount", 3)
+            scroll_amount = amount * 100  # Convert to pixels
+
+            if direction == "down":
+                await page.mouse.move(x, y)
+                await page.mouse.wheel(0, scroll_amount)
+            elif direction == "up":
+                await page.mouse.move(x, y)
+                await page.mouse.wheel(0, -scroll_amount)
+
+            await asyncio.sleep(0.5)  # Wait for scroll to complete
+            return f"Scrolled {direction} by {amount} units"
+
+        elif action_type == "type":
+            text = action.get("text", "")
+            await page.keyboard.type(text)
+            return f"Typed: {text[:50]}..."
+
+        elif action_type == "key":
+            key = action.get("key", "")
+            # Map common key names
+            key_map = {
+                "Return": "Enter",
+                "space": "Space",
+                "BackSpace": "Backspace",
+            }
+            mapped_key = key_map.get(key, key)
+            await page.keyboard.press(mapped_key)
+            return f"Pressed key: {key}"
+
+        else:
+            return f"Unknown action type: {action_type}"
+
+    except Exception as e:
+        return f"Error executing {action_type}: {str(e)}"
 
 
-def search_site_with_claude(
+async def search_site_with_computer_use(
     anthropic_client,
     site_id: str,
     search_params: dict,
     max_jobs: int = 25,
 ) -> dict:
-    """Use Claude to generate realistic job listings based on search criteria."""
-    from anthropic import APIError
+    """Use Claude Computer Use to browse job site and extract listings."""
+    from playwright.async_api import async_playwright
 
     search_url = build_search_url(site_id, search_params)
     if not search_url:
         return {"jobs": [], "error": f"Unknown site: {site_id}"}
 
+    config = SITE_CONFIGS.get(site_id, {})
     roles = search_params.get("roles", ["software engineer"])
-    location = search_params.get("location", "remote")
 
-    prompt = f"""Generate {min(max_jobs, 10)} realistic job listings for the following search criteria:
-- Roles: {', '.join(roles)}
-- Location: {location}
-- Source: {site_id}
+    print(f"[{site_id}] Navigating to: {search_url}")
 
-Create varied, realistic job listings that might appear on {site_id}. Include:
-- Real-sounding company names (tech companies, startups, enterprises)
-- Realistic salary ranges for the roles
-- Appropriate job titles
-- Brief descriptions
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+            ],
+        )
 
-Return as JSON:
+        context = await browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        )
+
+        page = await context.new_page()
+
+        try:
+            # Navigate to search URL
+            await page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
+            await asyncio.sleep(3)  # Wait for dynamic content
+
+            # Take initial screenshot
+            screenshot = await page.screenshot()
+            screenshot_b64 = base64.b64encode(screenshot).decode()
+
+            # Build extraction prompt
+            extraction_prompt = f"""You are browsing {config.get('name', site_id)} to find job listings.
+
+Current search: {', '.join(roles)}
+URL: {search_url}
+
+{config.get('system_prompt', '')}
+
+TASK: Extract job listings visible on this page. For each job, extract:
+- title: Job title
+- company: Company name
+- location: Location (e.g., "Remote", "San Francisco, CA")
+- salary: Salary if shown (e.g., "$120,000 - $150,000/year")
+- url: The job URL if visible, otherwise use a placeholder
+
+Look at the screenshot and:
+1. If there are modals/popups blocking the view, use computer actions to dismiss them (click X or Close)
+2. If you need to scroll to see more jobs, scroll down
+3. Extract all visible job listings
+4. Stop when you have extracted {max_jobs} jobs or no more are visible
+
+When you have finished extracting jobs OR after 3 scroll attempts with no new jobs, respond with the final JSON output:
+
+```json
 {{
   "jobs": [
-    {{
-      "title": "Senior React Developer",
-      "company": "TechCorp Inc",
-      "location": "Remote",
-      "salary": "$140,000 - $180,000/year",
-      "url": "https://{site_id}.com/jobs/12345",
-      "description_preview": "Join our team building next-gen web applications...",
-      "employment_type": "full_time",
-      "remote_type": "fully_remote"
-    }}
+    {{"title": "...", "company": "...", "location": "...", "salary": "...", "url": "..."}}
   ],
   "metadata": {{
     "site": "{site_id}",
-    "jobs_extracted": 10
+    "total_found": <number>
   }}
 }}
+```"""
 
-Return ONLY valid JSON."""
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": screenshot_b64,
+                            },
+                        },
+                        {"type": "text", "text": extraction_prompt},
+                    ],
+                }
+            ]
+
+            # Computer Use loop
+            max_iterations = 10
+            iteration = 0
+            final_result = None
+
+            while iteration < max_iterations:
+                iteration += 1
+                print(f"[{site_id}] Computer Use iteration {iteration}")
+
+                try:
+                    response = anthropic_client.messages.create(
+                        model="claude-sonnet-4-20250514",
+                        max_tokens=4096,
+                        tools=[
+                            {
+                                "type": "computer_20241022",
+                                "name": "computer",
+                                "display_width_px": 1280,
+                                "display_height_px": 800,
+                            }
+                        ],
+                        messages=messages,
+                    )
+                except Exception as api_error:
+                    print(f"[{site_id}] API error: {api_error}")
+                    # If Computer Use fails, try simple extraction
+                    return await fallback_extraction(page, site_id, roles)
+
+                # Check if Claude wants to use a tool or has finished
+                has_tool_use = False
+                text_response = ""
+
+                for block in response.content:
+                    if block.type == "tool_use":
+                        has_tool_use = True
+                        tool_input = block.input
+
+                        # Execute the action
+                        action_result = await execute_computer_action(page, tool_input)
+                        print(f"[{site_id}] Action: {tool_input.get('action')} -> {action_result}")
+
+                        # Take new screenshot
+                        await asyncio.sleep(0.5)
+                        screenshot = await page.screenshot()
+                        screenshot_b64 = base64.b64encode(screenshot).decode()
+
+                        # Add tool result to messages
+                        messages.append({"role": "assistant", "content": response.content})
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "tool_result",
+                                        "tool_use_id": block.id,
+                                        "content": [
+                                            {
+                                                "type": "image",
+                                                "source": {
+                                                    "type": "base64",
+                                                    "media_type": "image/png",
+                                                    "data": screenshot_b64,
+                                                },
+                                            },
+                                            {"type": "text", "text": action_result},
+                                        ],
+                                    }
+                                ],
+                            }
+                        )
+                        break
+
+                    elif block.type == "text":
+                        text_response += block.text
+
+                # If no tool use, Claude has finished - parse the response
+                if not has_tool_use:
+                    final_result = parse_claude_response(text_response)
+                    break
+
+                # Stop condition
+                if response.stop_reason == "end_turn" and not has_tool_use:
+                    final_result = parse_claude_response(text_response)
+                    break
+
+            await browser.close()
+
+            if final_result:
+                final_result["search_url"] = search_url
+                return final_result
+
+            return {"jobs": [], "error": "Max iterations reached", "search_url": search_url}
+
+        except Exception as e:
+            await browser.close()
+            print(f"[{site_id}] Error: {str(e)}")
+            return {"jobs": [], "error": str(e), "search_url": search_url}
+
+
+async def fallback_extraction(page, site_id: str, roles: list[str]) -> dict:
+    """Fallback: Use Claude vision to extract jobs from current page state."""
+    from anthropic import Anthropic
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return {"jobs": [], "error": "No API key for fallback"}
+
+    client = Anthropic(api_key=api_key)
+
+    screenshot = await page.screenshot()
+    screenshot_b64 = base64.b64encode(screenshot).decode()
+
+    prompt = f"""Look at this job board screenshot and extract all visible job listings.
+
+For each job, extract:
+- title: Job title
+- company: Company name
+- location: Location
+- salary: Salary if visible
+- url: Placeholder URL
+
+Return as JSON:
+{{"jobs": [{{"title": "...", "company": "...", "location": "...", "salary": "...", "url": "https://{site_id}.com/job/..."}}]}}"""
 
     try:
-        response = anthropic_client.messages.create(
+        response = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4096,
-            system="You are a job listing generator for testing purposes. Generate realistic but fictional job listings.",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": screenshot_b64,
+                            },
+                        },
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
         )
 
-        # Extract text content from response
-        result_text = ""
+        text = ""
         for block in response.content:
             if hasattr(block, "text"):
-                result_text += block.text
+                text += block.text
 
-        # Try to parse JSON from response
-        jobs_data = parse_claude_response(result_text)
-        jobs_data["search_url"] = search_url
-
-        return jobs_data
-
-    except APIError as e:
-        return {"jobs": [], "error": str(e), "search_url": search_url}
+        return parse_claude_response(text)
     except Exception as e:
-        return {"jobs": [], "error": str(e), "search_url": search_url}
+        return {"jobs": [], "error": f"Fallback failed: {str(e)}"}
 
 
 def parse_claude_response(response_text: str) -> dict:
     """Parse Claude's response to extract job data."""
     # Try to find JSON in the response
+    json_match = re.search(r"```json\s*([\s\S]*?)\s*```", response_text)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # Try raw JSON
     json_match = re.search(r"\{[\s\S]*\}", response_text)
     if json_match:
         try:
@@ -398,7 +582,6 @@ def parse_claude_response(response_text: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    # If no valid JSON, return empty
     return {"jobs": [], "error": "Failed to parse response"}
 
 
@@ -409,10 +592,8 @@ def parse_claude_response(response_text: str) -> dict:
 
 def normalize_job(job: dict, source: str, session_id: str) -> dict:
     """Normalize extracted job data for database insertion."""
-    # Parse salary to extract min/max
     salary_min, salary_max = parse_salary(job.get("salary", ""))
 
-    # Map employment type to job_type
     job_type_map = {
         "full_time": "full_time",
         "full-time": "full_time",
@@ -421,23 +602,22 @@ def normalize_job(job: dict, source: str, session_id: str) -> dict:
         "contract": "contract",
         "freelance": "freelance",
     }
-    emp_type = job.get("employment_type", "").lower().replace(" ", "_")
+    emp_type = job.get("employment_type", "full_time").lower().replace(" ", "_")
     job_type = job_type_map.get(emp_type, "full_time")
 
-    # Determine timezone from location
     location = job.get("location", "Remote")
     tz_value = "global" if "remote" in location.lower() else None
 
     return {
         "title": job.get("title", "")[:500],
         "company": job.get("company", "")[:255],
-        "description": job.get("description_preview", ""),
+        "description": job.get("description_preview", job.get("description", "")),
         "salary_min": salary_min,
         "salary_max": salary_max,
         "currency": "USD",
         "job_type": job_type,
         "timezone": tz_value,
-        "tech_stack": [],  # Could be extracted from description later
+        "tech_stack": [],
         "experience_level": "any",
         "url": job.get("url", "")[:2000],
         "source": source,
@@ -452,19 +632,16 @@ def parse_salary(salary_str: str) -> tuple[Optional[int], Optional[int]]:
     if not salary_str:
         return None, None
 
-    # Remove common prefixes/suffixes
     salary_str = salary_str.replace("$", "").replace(",", "").replace("/year", "").replace("/yr", "")
     salary_str = salary_str.replace("k", "000").replace("K", "000")
 
-    # Try to find number ranges
     numbers = re.findall(r"(\d+(?:\.\d+)?)", salary_str)
     if len(numbers) >= 2:
         try:
             min_val = int(float(numbers[0]))
             max_val = int(float(numbers[1]))
-            # Normalize if values seem like hourly rates
             if min_val < 500:
-                min_val *= 2080  # hourly to annual
+                min_val *= 2080
                 max_val *= 2080
             return min_val, max_val
         except ValueError:
@@ -489,7 +666,6 @@ def parse_posted_date(date_str: str) -> Optional[str]:
     date_str = date_str.lower()
     now = datetime.now(timezone.utc)
 
-    # Match patterns like "2 days ago", "1 week ago", etc.
     match = re.search(r"(\d+)\s*(day|week|hour|minute|month)s?\s*ago", date_str)
     if match:
         num = int(match.group(1))
@@ -512,43 +688,29 @@ def parse_posted_date(date_str: str) -> Optional[str]:
 
         return (now - delta).isoformat()
 
-    # Handle "today", "yesterday"
     if "today" in date_str or "just posted" in date_str:
         return now.isoformat()
     if "yesterday" in date_str:
         from datetime import timedelta
+
         return (now - timedelta(days=1)).isoformat()
 
     return None
 
 
-def save_jobs_to_database(
-    supabase,
-    jobs: list[dict],
-    session_id: str,
-    source: str,
-) -> tuple[int, int]:
-    """
-    Save jobs to database with deduplication.
-    Returns (jobs_imported, duplicates_skipped).
-    """
+def save_jobs_to_database(supabase, jobs: list[dict], session_id: str, source: str) -> tuple[int, int]:
+    """Save jobs to database with deduplication."""
     imported = 0
     duplicates = 0
 
     for job in jobs:
         normalized = normalize_job(job, source, session_id)
 
-        # Skip if no URL
-        if not normalized.get("url"):
+        if not normalized.get("url") or not normalized.get("title"):
             continue
 
         # Check for existing job by URL
-        existing = (
-            supabase.table("jobs")
-            .select("id")
-            .eq("url", normalized["url"])
-            .execute()
-        )
+        existing = supabase.table("jobs").select("id").eq("url", normalized["url"]).execute()
 
         if existing.data:
             duplicates += 1
@@ -586,20 +748,11 @@ def save_jobs_to_database(
     image=image,
     timeout=900,  # 15 minutes
     secrets=[modal.Secret.from_name("jobiq-secrets")],
+    cpu=2.0,
+    memory=4096,
 )
-def process_import(session_id: str, user_api_key: Optional[str] = None):
-    """
-    Main worker function: process an import session.
-
-    1. Fetch session details from Supabase
-    2. For each enabled site, use Claude to generate job listings
-    3. Save jobs to database with deduplication
-    4. Update progress in real-time
-
-    Args:
-        session_id: The import session ID
-        user_api_key: Optional user-provided Anthropic API key (for non-max tier users)
-    """
+async def process_import(session_id: str, user_api_key: Optional[str] = None):
+    """Main worker function: process an import session using Claude Computer Use."""
     from anthropic import Anthropic
     from supabase import create_client
 
@@ -616,52 +769,43 @@ def process_import(session_id: str, user_api_key: Optional[str] = None):
     supabase = create_client(supabase_url, supabase_key)
 
     # Initialize Anthropic client
-    # Use user-provided key if available, otherwise fall back to platform key
     api_key = user_api_key or os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         print("ERROR: No Anthropic API key available")
-        supabase.table("import_sessions").update({
-            "status": "failed",
-            "error_message": "No API key configured. Please add your Anthropic API key in Preferences.",
-        }).eq("id", session_id).execute()
+        supabase.table("import_sessions").update(
+            {
+                "status": "failed",
+                "error_message": "No API key configured. Please add your Anthropic API key in Preferences.",
+            }
+        ).eq("id", session_id).execute()
         return {"error": "No API key available"}
 
     anthropic_client = Anthropic(api_key=api_key)
     print(f"Using {'user-provided' if user_api_key else 'platform'} API key")
 
     # Fetch session details
-    session_result = (
-        supabase.table("import_sessions")
-        .select("*")
-        .eq("id", session_id)
-        .single()
-        .execute()
-    )
+    session_result = supabase.table("import_sessions").select("*").eq("id", session_id).single().execute()
 
     if not session_result.data:
         print(f"ERROR: Session not found: {session_id}")
         return {"error": "Session not found"}
 
     session = session_result.data
-    # Handle search_params - might be a JSON string
     search_params = session.get("search_params", {})
     if isinstance(search_params, str):
         search_params = json.loads(search_params)
 
     # Fetch site results
-    sites_result = (
-        supabase.table("import_site_results")
-        .select("*")
-        .eq("session_id", session_id)
-        .execute()
-    )
+    sites_result = supabase.table("import_site_results").select("*").eq("session_id", session_id).execute()
     sites = sites_result.data or []
 
     # Update session to running
-    supabase.table("import_sessions").update({
-        "status": "running",
-        "started_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("id", session_id).execute()
+    supabase.table("import_sessions").update(
+        {
+            "status": "running",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+        }
+    ).eq("id", session_id).execute()
 
     total_found = 0
     total_imported = 0
@@ -678,15 +822,17 @@ def process_import(session_id: str, user_api_key: Optional[str] = None):
         print(f"Processing site: {site_id}")
 
         # Update site to running
-        supabase.table("import_site_results").update({
-            "status": "running",
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "search_url": build_search_url(site_id, search_params),
-        }).eq("id", site_result_id).execute()
+        supabase.table("import_site_results").update(
+            {
+                "status": "running",
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "search_url": build_search_url(site_id, search_params),
+            }
+        ).eq("id", site_result_id).execute()
 
         try:
-            # Search site with Claude
-            result = search_site_with_claude(
+            # Search site with Claude Computer Use
+            result = await search_site_with_computer_use(
                 anthropic_client,
                 site_id,
                 search_params,
@@ -697,23 +843,23 @@ def process_import(session_id: str, user_api_key: Optional[str] = None):
             error = result.get("error")
 
             if error:
-                print(f"Error from Claude for {site_id}: {error}")
+                print(f"Error from {site_id}: {error}")
                 errors.append(f"{site_id}: {error}")
 
             # Save jobs to database
-            imported, duplicates = save_jobs_to_database(
-                supabase, jobs, session_id, site_id
-            )
+            imported, duplicates = save_jobs_to_database(supabase, jobs, session_id, site_id)
 
             # Update site result
-            supabase.table("import_site_results").update({
-                "status": "completed" if not error else "failed",
-                "jobs_found": len(jobs),
-                "jobs_imported": imported,
-                "duplicates_skipped": duplicates,
-                "error_message": error,
-                "completed_at": datetime.now(timezone.utc).isoformat(),
-            }).eq("id", site_result_id).execute()
+            supabase.table("import_site_results").update(
+                {
+                    "status": "completed" if not error else "failed",
+                    "jobs_found": len(jobs),
+                    "jobs_imported": imported,
+                    "duplicates_skipped": duplicates,
+                    "error_message": error,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }
+            ).eq("id", site_result_id).execute()
 
             total_found += len(jobs)
             total_imported += imported
@@ -726,22 +872,26 @@ def process_import(session_id: str, user_api_key: Optional[str] = None):
             print(f"Exception processing {site_id}: {error_msg}")
             errors.append(f"{site_id}: {error_msg}")
 
-            supabase.table("import_site_results").update({
-                "status": "failed",
-                "error_message": error_msg,
-                "completed_at": datetime.now(timezone.utc).isoformat(),
-            }).eq("id", site_result_id).execute()
+            supabase.table("import_site_results").update(
+                {
+                    "status": "failed",
+                    "error_message": error_msg,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }
+            ).eq("id", site_result_id).execute()
 
     # Mark session complete
-    final_status = "completed" if not errors else "completed"  # Still complete even with some errors
-    supabase.table("import_sessions").update({
-        "status": final_status,
-        "total_jobs_found": total_found,
-        "total_jobs_imported": total_imported,
-        "total_duplicates_skipped": total_duplicates,
-        "completed_at": datetime.now(timezone.utc).isoformat(),
-        "error_message": "; ".join(errors) if errors else None,
-    }).eq("id", session_id).execute()
+    final_status = "completed"
+    supabase.table("import_sessions").update(
+        {
+            "status": final_status,
+            "total_jobs_found": total_found,
+            "total_jobs_imported": total_imported,
+            "total_duplicates_skipped": total_duplicates,
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "error_message": "; ".join(errors) if errors else None,
+        }
+    ).eq("id", session_id).execute()
 
     print(f"Import complete: found={total_found}, imported={total_imported}, duplicates={total_duplicates}")
 
@@ -762,22 +912,14 @@ def process_import(session_id: str, user_api_key: Optional[str] = None):
 @app.function(image=image, secrets=[modal.Secret.from_name("jobiq-secrets")])
 @modal.fastapi_endpoint(method="POST")
 async def webhook(request: dict):
-    """
-    Webhook endpoint called by Next.js to start an import.
-
-    Request body: {
-        "session_id": "uuid",
-        "anthropic_api_key": "sk-ant-..." (optional, for non-max tier users)
-    }
-    Response: {"status": "started", "session_id": "uuid"}
-    """
+    """Webhook endpoint called by Next.js to start an import."""
     session_id = request.get("session_id")
-    user_api_key = request.get("anthropic_api_key")  # Optional user-provided key
+    user_api_key = request.get("anthropic_api_key")
 
     if not session_id:
         return {"error": "session_id is required"}, 400
 
-    # Spawn the worker asynchronously with optional user API key
+    # Spawn the worker asynchronously
     process_import.spawn(session_id, user_api_key)
 
     return {
@@ -796,7 +938,7 @@ async def webhook(request: dict):
 @modal.fastapi_endpoint(method="GET")
 async def health():
     """Health check endpoint."""
-    return {"status": "ok", "service": "jobiq-import-worker"}
+    return {"status": "ok", "service": "jobiq-import-worker", "version": "2.0"}
 
 
 # =============================================================================
@@ -807,7 +949,6 @@ async def health():
 @app.local_entrypoint()
 def main():
     """Local testing entrypoint."""
-    print("JobIQ Import Worker")
+    print("JobIQ Import Worker v2.0 (Claude Computer Use)")
     print("Deploy with: modal deploy worker/modal_import_worker.py")
-    print("Test webhook at: https://jobiq--webhook.modal.run")
-
+    print("Test webhook at: https://your-username--jobiq-import-worker-webhook.modal.run")
