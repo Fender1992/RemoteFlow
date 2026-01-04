@@ -87,6 +87,15 @@ export default async function JobsPage({
 
   const { data: jobs, count } = await query
 
+  // Count jobs posted today
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const { count: newTodayCount } = await supabase
+    .from('jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true)
+    .gte('posted_date', today.toISOString())
+
   // Get user's saved jobs
   const { data: { user } } = await supabase.auth.getUser()
   let savedJobs: { job_id: string; status: string }[] = []
@@ -107,6 +116,7 @@ export default async function JobsPage({
       totalJobs={count || 0}
       currentPage={page}
       pageSize={limit}
+      newTodayCount={newTodayCount || 0}
     />
   )
 }

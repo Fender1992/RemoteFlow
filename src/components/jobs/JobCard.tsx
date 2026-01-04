@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardFooter } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { formatSalary, formatDate, capitalizeFirst, cn } from '@/lib/utils'
@@ -154,14 +155,12 @@ export function JobCard({
         {/* Title section with hover color change and match badge */}
         <div className="flex items-start gap-2 mb-3">
           <h3 className="text-lg font-semibold text-[var(--text-primary)] group flex-1">
-            <a
-              href={job.url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={`/jobs/${job.id}`}
               className="hover:text-[var(--primary-600)] transition-colors"
             >
               {job.title}
-            </a>
+            </Link>
           </h3>
           {showMatchBadge && (
             <MatchBadge jobId={job.id} className="flex-shrink-0" />

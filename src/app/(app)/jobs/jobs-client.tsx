@@ -17,6 +17,7 @@ interface JobsClientProps {
   totalJobs: number
   currentPage: number
   pageSize: number
+  newTodayCount: number
 }
 
 function JobsClientInner({
@@ -25,6 +26,7 @@ function JobsClientInner({
   totalJobs,
   currentPage,
   pageSize,
+  newTodayCount,
 }: JobsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -88,7 +90,15 @@ function JobsClientInner({
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Remote Jobs</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Remote Jobs</h1>
+          {newTodayCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--health-good-bg)] text-[var(--health-good-text)] text-sm font-medium rounded-full">
+              <span className="w-1.5 h-1.5 bg-[var(--health-good)] rounded-full animate-pulse" />
+              {newTodayCount} new today
+            </span>
+          )}
+        </div>
         <p className="text-[var(--text-secondary)]">
           <span className="font-semibold text-[var(--primary-600)]">{totalJobs.toLocaleString()}</span> jobs with AI-powered ghost detection
         </p>

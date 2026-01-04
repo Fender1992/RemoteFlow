@@ -1,7 +1,23 @@
 // Job types
 export type JobType = 'full_time' | 'part_time' | 'contract' | 'freelance' | 'internship'
 export type ExperienceLevel = 'any' | 'junior' | 'mid' | 'senior' | 'lead'
-export type SavedJobStatus = 'saved' | 'applied' | 'rejected' | 'offer'
+export type SavedJobStatus = 'saved' | 'applied' | 'interviewing' | 'rejected' | 'offer'
+
+// Kanban board configuration
+export interface KanbanColumn {
+  id: SavedJobStatus
+  title: string
+  icon: string
+  color: string
+}
+
+export const KANBAN_COLUMNS: KanbanColumn[] = [
+  { id: 'saved', title: 'Saved', icon: '📥', color: 'var(--text-secondary)' },
+  { id: 'applied', title: 'Applied', icon: '📤', color: 'var(--primary-600)' },
+  { id: 'interviewing', title: 'Interview', icon: '💬', color: 'var(--health-caution)' },
+  { id: 'offer', title: 'Offer', icon: '✅', color: 'var(--health-good)' },
+  { id: 'rejected', title: 'Rejected', icon: '❌', color: 'var(--health-danger)' },
+]
 
 // Quality system types
 export type JobStatus =

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
+import { NAV_ITEMS } from './Header'
 
 interface MobileMenuProps {
   isOpen: boolean
@@ -17,23 +18,38 @@ interface MobileNavLinkProps {
   children: React.ReactNode
   isActive: boolean
   onClick: () => void
+  icon?: React.ComponentType<{ className?: string }>
 }
 
-function MobileNavLink({ href, children, isActive, onClick }: MobileNavLinkProps) {
+function MobileNavLink({ href, children, isActive, onClick, icon: Icon }: MobileNavLinkProps) {
   return (
     <Link
       href={href}
       onClick={onClick}
       className={`
-        touch-target flex items-center px-4 py-3 text-lg font-medium rounded-lg transition-colors
+        touch-target flex items-center gap-3 px-4 py-3 text-lg font-medium rounded-lg transition-colors
         ${isActive
-          ? 'bg-[var(--primary-50)] text-[var(--primary-600)]'
-          : 'text-gray-700 hover:bg-gray-100'
+          ? 'bg-[var(--primary-50)] text-[var(--primary-600)] border-l-2 border-[var(--primary-600)]'
+          : 'text-[var(--gray-700)] hover:bg-[var(--gray-100)]'
         }
       `}
     >
+      {Icon && <Icon className="w-5 h-5" />}
       {children}
     </Link>
+  )
+}
+
+function MobileLogo() {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xl" aria-hidden="true">⚡</span>
+      <span className="text-xl tracking-tight">
+        <span className="font-medium text-[var(--gray-900)]">Job</span>
+        <span className="text-[var(--primary-500)] font-light">|</span>
+        <span className="font-bold text-[var(--primary-600)]">IQ</span>
+      </span>
+    </div>
   )
 }
 
@@ -67,6 +83,15 @@ export function MobileMenu({ isOpen, onClose, user, onSignOut }: MobileMenuProps
     if (path === '/jobs') {
       return pathname === '/jobs' || pathname?.startsWith('/jobs/')
     }
+    if (path === '/settings') {
+      // Also match /preferences and /profile for backwards compatibility
+      return pathname === '/settings' ||
+             pathname?.startsWith('/settings/') ||
+             pathname === '/preferences' ||
+             pathname?.startsWith('/preferences/') ||
+             pathname === '/profile' ||
+             pathname?.startsWith('/profile/')
+    }
     return pathname === path || pathname?.startsWith(`${path}/`)
   }
 
@@ -85,14 +110,14 @@ export function MobileMenu({ isOpen, onClose, user, onSignOut }: MobileMenuProps
       <div className="absolute inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl animate-slide-in-from-right">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 h-16 border-b border-gray-200">
-            <span className="text-xl font-bold text-[var(--primary-600)]">JobIQ</span>
+          <div className="flex items-center justify-between px-4 h-16 border-b border-[var(--gray-200)]">
+            <MobileLogo />
             <button
               onClick={onClose}
-              className="touch-target flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+              className="touch-target flex items-center justify-center rounded-lg hover:bg-[var(--gray-100)] transition-colors"
               aria-label="Close menu"
             >
-              <X className="w-6 h-6 text-gray-600" />
+              <X className="w-6 h-6 text-[var(--gray-600)]" />
             </button>
           </div>
 
@@ -100,24 +125,17 @@ export function MobileMenu({ isOpen, onClose, user, onSignOut }: MobileMenuProps
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {user ? (
               <>
-                <MobileNavLink href="/jobs" isActive={isActive('/jobs')} onClick={onClose}>
-                  Jobs
-                </MobileNavLink>
-                <MobileNavLink href="/import" isActive={isActive('/import')} onClick={onClose}>
-                  Find Jobs
-                </MobileNavLink>
-                <MobileNavLink href="/viewed" isActive={isActive('/viewed')} onClick={onClose}>
-                  Viewed
-                </MobileNavLink>
-                <MobileNavLink href="/saved" isActive={isActive('/saved')} onClick={onClose}>
-                  Saved
-                </MobileNavLink>
-                <MobileNavLink href="/profile" isActive={isActive('/profile')} onClick={onClose}>
-                  Profile
-                </MobileNavLink>
-                <MobileNavLink href="/preferences" isActive={isActive('/preferences')} onClick={onClose}>
-                  Settings
-                </MobileNavLink>
+                {NAV_ITEMS.map((item) => (
+                  <MobileNavLink
+                    key={item.href}
+                    href={item.href}
+                    isActive={isActive(item.href)}
+                    onClick={onClose}
+                    icon={item.icon}
+                  >
+                    {item.label}
+                  </MobileNavLink>
+                ))}
               </>
             ) : (
               <>
@@ -134,19 +152,19 @@ export function MobileMenu({ isOpen, onClose, user, onSignOut }: MobileMenuProps
           {/* User section */}
           {user && (
             <div
-              className="border-t border-gray-200 px-4 py-4"
+              className="border-t border-[var(--gray-200)] px-4 py-4"
               style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 1rem)' }}
             >
               <div className="mb-3">
-                <p className="text-sm text-gray-500">Signed in as</p>
-                <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+                <p className="text-sm text-[var(--gray-500)]">Signed in as</p>
+                <p className="text-sm font-medium text-[var(--gray-900)] truncate">{user.email}</p>
               </div>
               <button
                 onClick={() => {
                   onSignOut()
                   onClose()
                 }}
-                className="w-full touch-target flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="w-full touch-target flex items-center justify-center px-4 py-3 text-sm font-medium text-[var(--gray-700)] bg-[var(--gray-100)] rounded-lg hover:bg-[var(--gray-200)] transition-colors"
               >
                 Sign out
               </button>

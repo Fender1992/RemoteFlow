@@ -17,7 +17,7 @@ export async function PATCH(
   const { status, notes, applied_date } = updates
 
   // Validate status
-  const validStatuses = ['saved', 'applied', 'rejected', 'offer']
+  const validStatuses = ['saved', 'applied', 'interviewing', 'rejected', 'offer']
   if (status && !validStatuses.includes(status)) {
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
   }

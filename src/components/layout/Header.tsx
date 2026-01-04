@@ -3,12 +3,36 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { Menu } from 'lucide-react'
+import { Menu, Briefcase, Search, Kanban, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { MobileMenu } from './MobileMenu'
 
 interface HeaderProps {
   user?: { email?: string; name?: string } | null
+}
+
+// Navigation configuration - single source of truth
+const NAV_ITEMS = [
+  { href: '/jobs', label: 'Jobs', icon: Briefcase },
+  { href: '/import', label: 'Find Jobs', icon: Search },
+  { href: '/saved', label: 'Pipeline', icon: Kanban },
+  { href: '/settings', label: 'Settings', icon: Settings },
+] as const
+
+// Export for use in MobileMenu
+export { NAV_ITEMS }
+
+function Logo({ href }: { href: string }) {
+  return (
+    <Link href={href} className="flex items-center gap-1.5 group">
+      <span className="text-xl" aria-hidden="true">⚡</span>
+      <span className="text-xl tracking-tight">
+        <span className="font-medium text-[var(--gray-900)]">Job</span>
+        <span className="text-[var(--primary-500)] font-light">|</span>
+        <span className="font-bold text-[var(--primary-600)]">IQ</span>
+      </span>
+    </Link>
+  )
 }
 
 interface NavLinkProps {
@@ -22,14 +46,21 @@ function NavLink({ href, children, isActive }: NavLinkProps) {
     <Link
       href={href}
       className={`
-        px-3 py-2 rounded-md font-medium transition-all duration-200
+        relative px-3 py-2 font-medium transition-all duration-200
         ${isActive
-          ? 'bg-[var(--primary-50)] text-[var(--primary-600)] font-semibold'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'text-[var(--primary-600)] bg-[var(--primary-50)]'
+          : 'text-[var(--gray-600)] hover:text-[var(--gray-900)] hover:bg-[var(--gray-100)]'
         }
       `}
     >
       {children}
+      {/* Bottom border indicator for active state */}
+      {isActive && (
+        <span
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--primary-600)]"
+          aria-hidden="true"
+        />
+      )}
     </Link>
   )
 }
@@ -54,38 +85,36 @@ export function Header({ user }: HeaderProps) {
     if (path === '/jobs') {
       return pathname === '/jobs' || pathname?.startsWith('/jobs/')
     }
+    if (path === '/settings') {
+      // Also match /preferences and /profile for backwards compatibility
+      return pathname === '/settings' ||
+             pathname?.startsWith('/settings/') ||
+             pathname === '/preferences' ||
+             pathname?.startsWith('/preferences/') ||
+             pathname === '/profile' ||
+             pathname?.startsWith('/profile/')
+    }
     return pathname === path || pathname?.startsWith(`${path}/`)
   }
 
   return (
-    <header className="bg-white border-b border-gray-200">
+    <header className="bg-white border-b border-[var(--gray-200)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-8">
-            <Link href={user ? '/jobs' : '/'} className="text-xl font-bold text-[var(--primary-600)]">
-              JobIQ
-            </Link>
+            <Logo href={user ? '/jobs' : '/'} />
 
             {user && (
-              <nav className="hidden md:flex items-center gap-2">
-                <NavLink href="/jobs" isActive={isActive('/jobs')}>
-                  Jobs
-                </NavLink>
-                <NavLink href="/import" isActive={isActive('/import')}>
-                  Find Jobs
-                </NavLink>
-                <NavLink href="/viewed" isActive={isActive('/viewed')}>
-                  Viewed
-                </NavLink>
-                <NavLink href="/saved" isActive={isActive('/saved')}>
-                  Saved
-                </NavLink>
-                <NavLink href="/profile" isActive={isActive('/profile')}>
-                  Profile
-                </NavLink>
-                <NavLink href="/preferences" isActive={isActive('/preferences')}>
-                  Settings
-                </NavLink>
+              <nav className="hidden md:flex items-center gap-1">
+                {NAV_ITEMS.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    href={item.href}
+                    isActive={isActive(item.href)}
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
               </nav>
             )}
           </div>
@@ -93,12 +122,12 @@ export function Header({ user }: HeaderProps) {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <span className="text-sm text-gray-600 hidden sm:block">
+                <span className="text-sm text-[var(--gray-600)] hidden sm:block">
                   {user.email}
                 </span>
                 <button
                   onClick={handleSignOut}
-                  className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200 hidden md:block"
+                  className="text-sm text-[var(--gray-600)] hover:text-[var(--gray-900)] font-medium transition-colors duration-200 hidden md:block"
                 >
                   Sign out
                 </button>
@@ -107,7 +136,7 @@ export function Header({ user }: HeaderProps) {
               <>
                 <Link
                   href="/login"
-                  className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200 hidden md:block"
+                  className="text-sm text-[var(--gray-600)] hover:text-[var(--gray-900)] font-medium transition-colors duration-200 hidden md:block"
                 >
                   Sign in
                 </Link>
@@ -123,10 +152,10 @@ export function Header({ user }: HeaderProps) {
             {/* Mobile hamburger button */}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="touch-target flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors md:hidden"
+              className="touch-target flex items-center justify-center rounded-lg hover:bg-[var(--gray-100)] transition-colors md:hidden"
               aria-label="Open menu"
             >
-              <Menu className="w-6 h-6 text-gray-600" />
+              <Menu className="w-6 h-6 text-[var(--gray-600)]" />
             </button>
           </div>
         </div>
