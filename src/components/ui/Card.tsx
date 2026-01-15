@@ -28,6 +28,14 @@ export function CardHeader({ children, className }: Omit<CardProps, 'hover'>) {
   )
 }
 
+export function CardTitle({ children, className }: Omit<CardProps, 'hover'>) {
+  return (
+    <h3 className={cn('text-lg font-bold text-[var(--text-primary)]', className)}>
+      {children}
+    </h3>
+  )
+}
+
 export function CardContent({ children, className }: Omit<CardProps, 'hover'>) {
   return <div className={cn('px-5 py-4', className)}>{children}</div>
 }

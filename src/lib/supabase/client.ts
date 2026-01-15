@@ -9,10 +9,7 @@ export function createClient() {
       url: supabaseUrl ? 'set' : 'missing',
       key: supabaseAnonKey ? 'set' : 'missing',
     })
-    throw new Error(
-      'Missing Supabase configuration. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
-    )
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
-
   return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }

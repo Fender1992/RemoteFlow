@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { Menu, Briefcase, Search, Kanban, Settings } from 'lucide-react'
+import { Menu, Briefcase, Search, Kanban, Settings, Shield } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { MobileMenu } from './MobileMenu'
 
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/import', label: 'Find Jobs', icon: Search },
   { href: '/saved', label: 'Pipeline', icon: Kanban },
+  { href: '/profile/verification', label: 'Trust Dashboard', icon: Shield },
   { href: '/settings', label: 'Settings', icon: Settings },
 ] as const
 
@@ -88,11 +89,11 @@ export function Header({ user }: HeaderProps) {
     if (path === '/settings') {
       // Also match /preferences and /profile for backwards compatibility
       return pathname === '/settings' ||
-             pathname?.startsWith('/settings/') ||
-             pathname === '/preferences' ||
-             pathname?.startsWith('/preferences/') ||
-             pathname === '/profile' ||
-             pathname?.startsWith('/profile/')
+        pathname?.startsWith('/settings/') ||
+        pathname === '/preferences' ||
+        pathname?.startsWith('/preferences/') ||
+        pathname === '/profile' ||
+        pathname?.startsWith('/profile/')
     }
     return pathname === path || pathname?.startsWith(`${path}/`)
   }

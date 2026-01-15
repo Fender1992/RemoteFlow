@@ -9,12 +9,14 @@ export interface CompanyMetrics {
   ghostRatio?: number // 0-1: ratio of ghost jobs to total jobs
   evergreenJobCount?: number // number of evergreen/perpetually open jobs
   totalJobsPosted?: number // total jobs posted by company
+  isVerified?: boolean // whether the company is verified
 }
 
 export interface CredibilityResult {
   score: number
   grade: string
   redFlags: string[]
+  isVerified: boolean
   components: {
     fillRateScore: number
     responseRateScore: number
@@ -243,6 +245,7 @@ export function analyzeCredibility(metrics: CompanyMetrics): CredibilityResult {
     score,
     grade,
     redFlags,
+    isVerified: !!metrics.isVerified,
     components: {
       fillRateScore: fillRate,
       responseRateScore: responseRate,

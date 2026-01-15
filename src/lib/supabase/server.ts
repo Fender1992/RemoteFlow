@@ -26,8 +26,6 @@ export async function createClient() {
   )
 }
 
-// Service role client for cron jobs and admin operations
-// IMPORTANT: Only use server-side, never expose to client
 export function createServiceClient() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,7 +33,7 @@ export function createServiceClient() {
     {
       cookies: {
         getAll: () => [],
-        setAll: () => {},
+        setAll: () => { },
       },
     }
   )

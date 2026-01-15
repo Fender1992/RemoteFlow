@@ -11,6 +11,7 @@ import { JobChatPanel } from '@/components/jobs/JobChatPanel'
 import { MatchBadge } from '@/components/jobs/MatchBadge'
 import { CredibilityBadge } from '@/components/companies/CredibilityBadge'
 import { TimeToFillBadge } from '@/components/jobs/TimeToFillBadge'
+import { VerificationBadge } from '@/components/ui/VerificationBadge'
 import type { Job, GhostFlag, Company, CompanyReputation } from '@/types'
 
 interface JobCardProps {
@@ -117,7 +118,12 @@ export function JobCard({
               </div>
             )}
             <div>
-              <p className="text-sm font-medium text-[var(--text-secondary)]">{job.company}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-[var(--text-secondary)]">{job.company}</p>
+                {companyData?.is_verified && (
+                  <VerificationBadge level="gold" label="Verified Company" />
+                )}
+              </div>
               <p className="text-xs text-[var(--text-tertiary)]">
                 {job.posted_date ? formatDate(job.posted_date) : 'Recently posted'}
               </p>
@@ -232,6 +238,16 @@ export function JobCard({
               ghostScore={ghostScore}
               showTooltip={true}
             />
+
+            {/* Recruiter verification */}
+            {(job as any).is_verified_recruiter && (
+              <VerificationBadge level="blue" label="Verified Recruiter" />
+            )}
+
+            {/* Job verification */}
+            {(job as any).is_verified_job && (
+              <VerificationBadge level="gold" label="Verified Job" />
+            )}
 
             {/* Company credibility grade */}
             {companyData?.reputation?.credibility_grade && (
