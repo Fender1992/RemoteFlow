@@ -99,3 +99,8 @@ issue that needs to be fixed in the Vercel dashboard:
 3. Or set up a new production domain
 
 The app works correctly locally and the API returns 254+ jobs from the database.
+
+---
+
+## 2026-01-14 - Access Verification
+- Verified GitHub access with a test push.
