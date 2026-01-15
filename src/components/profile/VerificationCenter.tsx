@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Shield, CheckCircle2, AlertTriangle, Github, Linkedin, Mail, ExternalLink, ArrowRight, Lock } from 'lucide-react'
+import Link from 'next/link'
 import { VerificationBadge } from '@/components/ui/VerificationBadge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -179,17 +180,13 @@ export function VerificationCenter({ userProfile }: { userProfile: any }) {
                                         Reviewing
                                     </div>
                                 ) : (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 p-0 font-bold group/btn"
-                                        asChild
+                                    <Link
+                                        href={step.link || '#'}
+                                        className="inline-flex items-center text-primary-600 hover:text-primary-700 font-bold group/btn transition-colors duration-200"
                                     >
-                                        <a href={step.link || '#'}>
-                                            Complete Verification
-                                            <ArrowRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
-                                        </a>
-                                    </Button>
+                                        Complete Verification
+                                        <ArrowRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
+                                    </Link>
                                 )}
                             </div>
                         </CardContent>
