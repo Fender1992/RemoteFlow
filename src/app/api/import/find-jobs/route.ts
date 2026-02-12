@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { checkRateLimits, incrementRateLimits } from '@/lib/import/rate-limiter'
 import { triggerWorker } from '@/lib/import/worker/trigger'
+import { safeDecrypt } from '@/lib/crypto/encrypt'
+import { rateLimit, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 import type { UserPreferencesExtended, ImportSearchParams, ImportSiteId } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,9 @@ export const dynamic = 'force-dynamic'
 const DEFAULT_SITES: ImportSiteId[] = ['linkedin', 'indeed', 'glassdoor', 'dice', 'wellfound']
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = rateLimit(request, 'import', RATE_LIMIT_PRESETS.sensitive)
+  if (rateLimitResponse) return rateLimitResponse
+
   const supabase = await createClient()
 
   // 1. Authenticate user
@@ -123,7 +127,8 @@ export async function POST(request: NextRequest) {
 
   // 8. Trigger external worker
   // Pass user's API key for non-max tiers, null for max tier (uses platform key)
-  const userApiKey = isMaxTier ? null : profile?.anthropic_api_key
+  const rawUserKey = isMaxTier ? null : profile?.anthropic_api_key
+  const userApiKey = rawUserKey ? safeDecrypt(rawUserKey) : null
   const triggerResult = await triggerWorker(session.id, userApiKey)
 
   if (!triggerResult.success) {

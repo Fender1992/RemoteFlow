@@ -5,6 +5,7 @@ import {
   validateApiKey,
   CacheGPTClientConfig,
 } from '@/lib/cachegpt/client'
+import { safeDecrypt } from '@/lib/crypto/encrypt'
 import type { Job, JobChatContext, CompanyReputation } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -83,7 +84,8 @@ export async function POST(
     }
   } else {
     // Require user's own key for free/pro
-    apiKey = profile?.cachegpt_api_key || ''
+    const rawKey = profile?.cachegpt_api_key || ''
+    apiKey = rawKey ? safeDecrypt(rawKey) : ''
     if (!apiKey) {
       return NextResponse.json(
         {

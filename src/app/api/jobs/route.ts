@@ -50,7 +50,15 @@ export async function GET(request: NextRequest) {
 
   // Apply search filter (title, company, description)
   if (filters.search) {
-    query = query.or(`title.ilike.%${filters.search}%,company.ilike.%${filters.search}%`)
+    // Escape PostgREST special characters to prevent filter injection
+    const sanitized = filters.search
+      .replace(/\\/g, '\\\\')
+      .replace(/%/g, '\\%')
+      .replace(/,/g, '\\,')
+      .replace(/\./g, '\\.')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)')
+    query = query.or(`title.ilike.%${sanitized}%,company.ilike.%${sanitized}%`)
   }
 
   // Apply job_types filter

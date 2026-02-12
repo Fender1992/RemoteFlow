@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { calculateCredibilityScore, scoreToGrade, calculateHiringTrend } from '@/lib/quality/credibility'
+import { verifyCronAuth } from '@/lib/auth/cron-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5 minutes max
@@ -99,14 +100,8 @@ function calculateReputationScore(metrics: {
  * 4. Flags companies with low scores for review
  */
 export async function POST(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  const vercelCronHeader = request.headers.get('x-vercel-cron')
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}` && vercelCronHeader !== '1') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authError = verifyCronAuth(request)
+  if (authError) return authError
 
   const startTime = Date.now()
   const supabase = createServiceClient()
@@ -154,164 +149,85 @@ export async function POST(request: NextRequest) {
       try {
         stats.totalCompaniesProcessed++
 
-        // Get job counts by status
-        const { count: totalJobs } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
+        // Use database function to get all metrics in one query (eliminates N+1)
+        const { data: metricsResult, error: metricsError } = await supabase
+          .rpc('calculate_company_metrics', { p_company_id: company.id })
+
+        let totalJobs: number
+        let jobsFilled: number
+        let jobsExpired: number
+        let jobsGhosted: number
+        let avgRepostsPerJob: number
+        let responseRate: number
+        let avgTimeToFillDays: number | null
+        let medianTimeToFillDays: number | null
+        let outcomeResponseRate: number
+        let interviewRate: number
+        let offerRate: number
+        let evergreenJobCount: number
+        let hiringTrend: 'growing' | 'stable' | 'declining'
+
+        if (!metricsError && metricsResult) {
+          // Use aggregated metrics from DB function
+          const m = metricsResult as Record<string, number | null>
+          totalJobs = (m.total_jobs as number) || 0
+          jobsFilled = (m.jobs_filled as number) || 0
+          jobsExpired = (m.jobs_expired as number) || 0
+          jobsGhosted = (m.jobs_ghosted as number) || 0
+          avgRepostsPerJob = (m.avg_reposts_per_job as number) || 1.0
+          const totalSignals = (m.total_signals as number) || 0
+          const responseSignals = (m.response_signals as number) || 0
+          responseRate = totalSignals > 0 ? responseSignals / totalSignals : 0.5
+          avgTimeToFillDays = m.avg_time_to_fill_days as number | null
+          medianTimeToFillDays = m.median_time_to_fill_days as number | null
+          const totalOutcomes = (m.total_outcomes as number) || 0
+          const responsesReceived = (m.responses_received as number) || 0
+          const interviewCount = (m.interview_count as number) || 0
+          const offerCount = (m.offer_count as number) || 0
+          outcomeResponseRate = totalOutcomes > 0 ? responsesReceived / totalOutcomes : responseRate
+          interviewRate = totalOutcomes > 0 ? interviewCount / totalOutcomes : 0
+          offerRate = totalOutcomes > 0 ? offerCount / totalOutcomes : 0
+          evergreenJobCount = (m.evergreen_job_count as number) || 0
+          hiringTrend = calculateHiringTrend((m.recent_jobs as number) || 0, (m.previous_jobs as number) || 0)
+        } else {
+          // Fallback: individual queries if function not available
+          const { count: tc } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('company_id', company.id)
+          totalJobs = tc || 0
+          if (totalJobs === 0) continue
+          const { count: fc } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('company_id', company.id).eq('status', 'closed_filled')
+          jobsFilled = fc || 0
+          const { count: ec } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('company_id', company.id).eq('status', 'closed_expired')
+          jobsExpired = ec || 0
+          const { count: gc } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('company_id', company.id).gte('ghost_score', 5)
+          jobsGhosted = gc || 0
+          avgRepostsPerJob = 1.0
+          responseRate = 0.5
+          avgTimeToFillDays = null
+          medianTimeToFillDays = null
+          outcomeResponseRate = 0.5
+          interviewRate = 0
+          offerRate = 0
+          evergreenJobCount = 0
+          hiringTrend = 'stable'
+        }
 
         // Skip companies with no jobs
-        if (!totalJobs || totalJobs === 0) {
-          continue
-        }
-
-        // Count jobs by status
-        const { count: jobsFilled } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .eq('status', 'closed_filled')
-
-        const { count: jobsExpired } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .eq('status', 'closed_expired')
-
-        // Count ghosted jobs (ghost_score >= 5)
-        const { count: jobsGhosted } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .gte('ghost_score', 5)
-
-        // Calculate average reposts per job
-        const { data: repostData } = await supabase
-          .from('jobs')
-          .select('repost_count')
-          .eq('company_id', company.id)
-          .not('repost_count', 'is', null)
-
-        let avgRepostsPerJob = 1.0
-        if (repostData && repostData.length > 0) {
-          const totalReposts = repostData.reduce((sum, job) => sum + (job.repost_count || 1), 0)
-          avgRepostsPerJob = totalReposts / repostData.length
-        }
-
-        // Calculate response rate from job_signals
-        const { count: totalSignals } = await supabase
-          .from('job_signals')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-
-        const { count: responseSignals } = await supabase
-          .from('job_signals')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .eq('signal_type', 'response_received')
-
-        const responseRate = totalSignals && totalSignals > 0
-          ? (responseSignals || 0) / totalSignals
-          : 0.5 // Default to neutral if no signals
+        if (totalJobs === 0) continue
 
         // Calculate reputation score
         const reputationScore = calculateReputationScore({
-          jobs_filled: jobsFilled || 0,
-          jobs_expired: jobsExpired || 0,
-          jobs_ghosted: jobsGhosted || 0,
+          jobs_filled: jobsFilled,
+          jobs_expired: jobsExpired,
+          jobs_ghosted: jobsGhosted,
           total_jobs: totalJobs,
           avg_reposts_per_job: avgRepostsPerJob,
           response_rate: responseRate,
         })
 
-        // Calculate time to fill metrics from jobs with lifecycle_status = 'filled'
-        const { data: filledJobsData } = await supabase
-          .from('jobs')
-          .select('days_to_fill')
-          .eq('company_id', company.id)
-          .eq('lifecycle_status', 'filled')
-          .not('days_to_fill', 'is', null)
-
-        let avgTimeToFillDays: number | null = null
-        let medianTimeToFillDays: number | null = null
-
-        if (filledJobsData && filledJobsData.length > 0) {
-          const fillTimes = filledJobsData.map(j => j.days_to_fill).filter((d): d is number => d !== null)
-          if (fillTimes.length > 0) {
-            avgTimeToFillDays = Math.round(fillTimes.reduce((a, b) => a + b, 0) / fillTimes.length)
-            // Calculate median
-            const sorted = [...fillTimes].sort((a, b) => a - b)
-            const mid = Math.floor(sorted.length / 2)
-            medianTimeToFillDays = sorted.length % 2 !== 0
-              ? sorted[mid]
-              : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
-          }
-        }
-
-        // Calculate application outcome rates from application_outcomes table
-        const { count: totalOutcomes } = await supabase
-          .from('application_outcomes')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-
-        const { count: responsesReceived } = await supabase
-          .from('application_outcomes')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .neq('outcome', 'no_response')
-
-        const { count: interviewCount } = await supabase
-          .from('application_outcomes')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .in('outcome', ['interview', 'offer', 'hired'])
-
-        const { count: offerCount } = await supabase
-          .from('application_outcomes')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .in('outcome', ['offer', 'hired'])
-
-        const outcomeResponseRate = totalOutcomes && totalOutcomes > 0
-          ? (responsesReceived || 0) / totalOutcomes
-          : responseRate // Fall back to existing response rate
-        const interviewRate = totalOutcomes && totalOutcomes > 0
-          ? (interviewCount || 0) / totalOutcomes
-          : 0
-        const offerRate = totalOutcomes && totalOutcomes > 0
-          ? (offerCount || 0) / totalOutcomes
-          : 0
-
-        // Count evergreen jobs
-        const { count: evergreenJobCount } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .eq('is_evergreen', true)
-
-        // Calculate hiring trend (compare last 30 days vs previous 30 days)
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
-
-        const { count: recentJobs } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .gte('created_at', thirtyDaysAgo.toISOString())
-
-        const { count: previousJobs } = await supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .gte('created_at', sixtyDaysAgo.toISOString())
-          .lt('created_at', thirtyDaysAgo.toISOString())
-
-        const hiringTrend = calculateHiringTrend(recentJobs || 0, previousJobs || 0)
-
         // Calculate credibility score
-        const fillRate = totalJobs > 0 ? (jobsFilled || 0) / totalJobs : 0.5
+        const fillRate = totalJobs > 0 ? jobsFilled / totalJobs : 0.5
         const repostRate = avgRepostsPerJob > 1 ? Math.min(1, (avgRepostsPerJob - 1) / avgRepostsPerJob) : 0
-        const ghostRatio = totalJobs > 0 ? (jobsGhosted || 0) / totalJobs : 0.1
+        const ghostRatio = totalJobs > 0 ? jobsGhosted / totalJobs : 0.1
 
         const credibilityScore = calculateCredibilityScore({
           fillRate,
@@ -319,7 +235,7 @@ export async function POST(request: NextRequest) {
           avgTimeToFillDays: avgTimeToFillDays ?? undefined,
           repostRate,
           ghostRatio,
-          evergreenJobCount: evergreenJobCount || 0,
+          evergreenJobCount,
           totalJobsPosted: totalJobs,
         })
 
@@ -328,21 +244,20 @@ export async function POST(request: NextRequest) {
         companyMetrics.push({
           company_id: company.id,
           company_name: company.name,
-          jobs_filled: jobsFilled || 0,
-          jobs_expired: jobsExpired || 0,
-          jobs_ghosted: jobsGhosted || 0,
+          jobs_filled: jobsFilled,
+          jobs_expired: jobsExpired,
+          jobs_ghosted: jobsGhosted,
           total_jobs: totalJobs,
           avg_reposts_per_job: Math.round(avgRepostsPerJob * 100) / 100,
           response_rate: Math.round(outcomeResponseRate * 100) / 100,
           reputation_score: reputationScore,
-          // Credibility metrics
           credibility_score: credibilityScore,
           credibility_grade: credibilityGrade,
           avg_time_to_fill_days: avgTimeToFillDays,
           median_time_to_fill_days: medianTimeToFillDays,
           interview_rate: Math.round(interviewRate * 100) / 100,
           offer_rate: Math.round(offerRate * 100) / 100,
-          evergreen_job_count: evergreenJobCount || 0,
+          evergreen_job_count: evergreenJobCount,
           hiring_trend: hiringTrend,
         })
 
@@ -360,17 +275,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update company_reputation table
+    // Upsert company_reputation table
     console.log(`=== Updating ${companyMetrics.length} company reputations ===`)
     for (const metrics of companyMetrics) {
       try {
-        // Check if reputation record exists
-        const { data: existing } = await supabase
-          .from('company_reputation')
-          .select('company_id')
-          .eq('company_id', metrics.company_id)
-          .single()
-
         const reputationData = {
           company_id: metrics.company_id,
           reputation_score: metrics.reputation_score,
@@ -380,7 +288,6 @@ export async function POST(request: NextRequest) {
           jobs_ghosted: metrics.jobs_ghosted,
           avg_reposts_per_job: metrics.avg_reposts_per_job,
           score_updated_at: now.toISOString(),
-          // Credibility metrics
           credibility_score: metrics.credibility_score,
           credibility_grade: metrics.credibility_grade,
           avg_time_to_fill_days: metrics.avg_time_to_fill_days,
@@ -392,33 +299,16 @@ export async function POST(request: NextRequest) {
           hiring_trend: metrics.hiring_trend,
         }
 
-        if (existing) {
-          // Update existing record
-          const { error: updateError } = await supabase
-            .from('company_reputation')
-            .update(reputationData)
-            .eq('company_id', metrics.company_id)
+        const { error: upsertError } = await supabase
+          .from('company_reputation')
+          .upsert(reputationData, { onConflict: 'company_id' })
 
-          if (updateError) {
-            console.error(`Error updating reputation for ${metrics.company_id}:`, updateError)
-            stats.errors++
-          } else {
-            stats.reputationScoresUpdated++
-            stats.credibilityScoresUpdated++
-          }
+        if (upsertError) {
+          console.error(`Error upserting reputation for ${metrics.company_id}:`, upsertError)
+          stats.errors++
         } else {
-          // Insert new record
-          const { error: insertError } = await supabase
-            .from('company_reputation')
-            .insert(reputationData)
-
-          if (insertError) {
-            console.error(`Error inserting reputation for ${metrics.company_id}:`, insertError)
-            stats.errors++
-          } else {
-            stats.reputationScoresUpdated++
-            stats.credibilityScoresUpdated++
-          }
+          stats.reputationScoresUpdated++
+          stats.credibilityScoresUpdated++
         }
       } catch (err) {
         console.error(`Error saving reputation for ${metrics.company_id}:`, err)
@@ -432,35 +322,25 @@ export async function POST(request: NextRequest) {
 
       for (const flag of companiesToFlag) {
         try {
-          // Check if already in review queue
-          const { data: existing } = await supabase
+          const { error: insertError } = await supabase
             .from('review_queue')
-            .select('id')
-            .eq('company_id', flag.company_id)
-            .eq('status', 'pending')
-            .single()
+            .insert({
+              company_id: flag.company_id,
+              reason: `Low reputation score (${flag.reputation_score}): ${flag.company_name}`,
+              type: 'low_reputation',
+              priority: flag.reputation_score < 0.15 ? 'high' : 'medium',
+              status: 'pending',
+              created_at: now.toISOString(),
+            })
 
-          if (!existing) {
-            const { error: insertError } = await supabase
-              .from('review_queue')
-              .insert({
-                company_id: flag.company_id,
-                reason: `Low reputation score (${flag.reputation_score}): ${flag.company_name}`,
-                type: 'low_reputation',
-                priority: flag.reputation_score < 0.15 ? 'high' : 'medium',
-                status: 'pending',
-                created_at: now.toISOString(),
-              })
-
-            if (insertError) {
-              // Ignore duplicate key errors
-              if (insertError.code !== '23505') {
-                console.error(`Error flagging company ${flag.company_id}:`, insertError)
-                stats.errors++
-              }
-            } else {
-              stats.companiesFlaggedForReview++
+          if (insertError) {
+            // Ignore duplicate key errors
+            if (insertError.code !== '23505') {
+              console.error(`Error flagging company ${flag.company_id}:`, insertError)
+              stats.errors++
             }
+          } else {
+            stats.companiesFlaggedForReview++
           }
         } catch (err) {
           console.error(`Error flagging company ${flag.company_id}:`, err)
@@ -498,7 +378,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Allow GET for manual testing
-export async function GET(request: NextRequest) {
-  return POST(request)
-}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { normalizeJobUrl, type AtsType } from '@/lib/tracking'
+import { getAllowedOrigin, corsHeaders } from '@/lib/cors'
 
 export const dynamic = 'force-dynamic'
 
@@ -170,13 +171,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<CheckUrlRe
 }
 
 // Allow OPTIONS for CORS preflight
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const origin = getAllowedOrigin(request)
+  if (!origin) {
+    return new NextResponse(null, { status: 403 })
+  }
   return new NextResponse(null, {
     status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
+    headers: corsHeaders(origin),
   })
 }

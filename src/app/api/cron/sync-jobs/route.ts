@@ -7,6 +7,7 @@ import { fetchRemoteOKJobs, normalizeRemoteOKJobs } from '@/lib/ingestion/remote
 import { fetchAllHimalayasJobs, normalizeHimalayasJobs } from '@/lib/ingestion/himalayas'
 import { fetchWWRJobs, normalizeWWRJobs } from '@/lib/ingestion/weworkremotely'
 import { dedupeAndUpsertJobs, markStaleJobsInactive } from '@/lib/ingestion/dedupe'
+import { verifyCronAuth } from '@/lib/auth/cron-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5 minutes max
@@ -19,16 +20,8 @@ interface SourceStats {
 }
 
 export async function POST(request: NextRequest) {
-  // Verify cron secret (for Vercel Cron or manual triggers)
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  // Also allow Vercel's cron header
-  const vercelCronHeader = request.headers.get('x-vercel-cron')
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}` && vercelCronHeader !== '1') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authError = verifyCronAuth(request)
+  if (authError) return authError
 
   const startTime = Date.now()
   const supabase = createServiceClient()
@@ -222,7 +215,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Allow GET for manual testing (not for production cron)
-export async function GET(request: NextRequest) {
-  return POST(request)
-}

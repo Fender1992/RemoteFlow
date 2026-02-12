@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { safeEncrypt, safeDecrypt } from '@/lib/crypto/encrypt'
+import { rateLimit, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
 // Get user's CacheGPT API key status (not the actual key for security)
 export async function GET() {
@@ -26,17 +28,25 @@ export async function GET() {
   const hasKey = !!profile?.cachegpt_api_key
   const needsKey = tier !== 'max' && tier !== 'enterprise'
 
+  let maskedKey: string | null = null
+  if (hasKey) {
+    const decrypted = safeDecrypt(profile.cachegpt_api_key!)
+    maskedKey = maskApiKey(decrypted)
+  }
+
   return NextResponse.json({
     hasKey,
     needsKey,
     tier,
-    // Show masked key if exists
-    maskedKey: hasKey ? maskApiKey(profile.cachegpt_api_key!) : null,
+    maskedKey,
   })
 }
 
 // Set or update the CacheGPT API key
 export async function PUT(request: NextRequest) {
+  const rateLimitResponse = rateLimit(request, 'cachegpt-key', RATE_LIMIT_PRESETS.sensitive)
+  if (rateLimitResponse) return rateLimitResponse
+
   const supabase = await createClient()
 
   const {
@@ -56,9 +66,11 @@ export async function PUT(request: NextRequest) {
     )
   }
 
+  const encryptedKey = api_key ? safeEncrypt(api_key) : null
+
   const { error } = await supabase
     .from('users_profile')
-    .update({ cachegpt_api_key: api_key || null })
+    .update({ cachegpt_api_key: encryptedKey })
     .eq('id', user.id)
 
   if (error) {

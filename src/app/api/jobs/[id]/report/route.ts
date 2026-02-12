@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rateLimitResponse = rateLimit(request, 'report', RATE_LIMIT_PRESETS.reporting)
+  if (rateLimitResponse) return rateLimitResponse
+
   const { id: jobId } = await params
   const supabase = await createClient()
 

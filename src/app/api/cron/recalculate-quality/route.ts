@@ -7,6 +7,7 @@ import {
   detectGhostIndicators,
   getCompanyReputation,
 } from '@/lib/quality'
+import { verifyCronAuth } from '@/lib/auth/cron-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5 minutes max
@@ -29,14 +30,8 @@ interface RecalculationStats {
  * 3. Marks jobs older than 90 days as status='closed_expired'
  */
 export async function POST(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  const vercelCronHeader = request.headers.get('x-vercel-cron')
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}` && vercelCronHeader !== '1') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authError = verifyCronAuth(request)
+  if (authError) return authError
 
   const startTime = Date.now()
   const supabase = createServiceClient()
@@ -88,7 +83,7 @@ export async function POST(request: NextRequest) {
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
 
     // Process jobs in batches to avoid timeout
-    const BATCH_SIZE = 100
+    const BATCH_SIZE = 50
     const jobsToUpdate: Array<{
       id: string
       health_score: number
@@ -104,6 +99,9 @@ export async function POST(request: NextRequest) {
       ghost_score: number
     }> = []
 
+    // Cache company reputation lookups to avoid repeated queries for the same company
+    const companyRepCache = new Map<string, Awaited<ReturnType<typeof getCompanyReputation>>>()
+
     for (const job of activeJobs) {
       try {
         // Check if job should be marked as expired (older than 90 days)
@@ -114,8 +112,12 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Get company reputation
-        const companyRep = await getCompanyReputation(supabase, job.company_id)
+        // Get company reputation (cached)
+        let companyRep = companyRepCache.get(job.company_id)
+        if (companyRep === undefined) {
+          companyRep = await getCompanyReputation(supabase, job.company_id)
+          companyRepCache.set(job.company_id, companyRep)
+        }
 
         // Calculate health score
         const { healthScore } = calculateHealthScore(
@@ -168,25 +170,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Batch update jobs with new scores
+    // Batch update jobs with new scores using Promise.all for parallelism
     console.log(`=== Updating ${jobsToUpdate.length} job scores ===`)
     for (let i = 0; i < jobsToUpdate.length; i += BATCH_SIZE) {
       const batch = jobsToUpdate.slice(i, i + BATCH_SIZE)
 
-      for (const update of batch) {
-        const { error: updateError } = await supabase
-          .from('jobs')
-          .update({
-            health_score: update.health_score,
-            quality_score: update.quality_score,
-            ghost_score: update.ghost_score,
-            ghost_flags: update.ghost_flags,
-            quality_updated_at: update.quality_updated_at,
-          })
-          .eq('id', update.id)
+      const results = await Promise.all(
+        batch.map((update) =>
+          supabase
+            .from('jobs')
+            .update({
+              health_score: update.health_score,
+              quality_score: update.quality_score,
+              ghost_score: update.ghost_score,
+              ghost_flags: update.ghost_flags,
+              quality_updated_at: update.quality_updated_at,
+            })
+            .eq('id', update.id)
+        )
+      )
 
-        if (updateError) {
-          console.error(`Error updating job ${update.id}:`, updateError)
+      for (let j = 0; j < results.length; j++) {
+        if (results[j].error) {
+          console.error(`Error updating job ${batch[j].id}:`, results[j].error)
           stats.errors++
         } else {
           stats.scoresUpdated++
@@ -219,35 +225,25 @@ export async function POST(request: NextRequest) {
       console.log(`=== Flagging ${jobsToFlag.length} jobs for review ===`)
 
       for (const flag of jobsToFlag) {
-        // Check if already in review queue
-        const { data: existing } = await supabase
+        const { error: insertError } = await supabase
           .from('review_queue')
-          .select('id')
-          .eq('job_id', flag.job_id)
-          .eq('status', 'pending')
-          .single()
+          .insert({
+            job_id: flag.job_id,
+            reason: flag.reason,
+            type: 'ghost_job',
+            priority: flag.ghost_score >= 7 ? 'high' : 'medium',
+            status: 'pending',
+            created_at: now.toISOString(),
+          })
 
-        if (!existing) {
-          const { error: insertError } = await supabase
-            .from('review_queue')
-            .insert({
-              job_id: flag.job_id,
-              reason: flag.reason,
-              type: 'ghost_job',
-              priority: flag.ghost_score >= 7 ? 'high' : 'medium',
-              status: 'pending',
-              created_at: now.toISOString(),
-            })
-
-          if (insertError) {
-            // Ignore duplicate key errors
-            if (insertError.code !== '23505') {
-              console.error(`Error flagging job ${flag.job_id}:`, insertError)
-              stats.errors++
-            }
-          } else {
-            stats.jobsFlaggedForReview++
+        if (insertError) {
+          // Ignore duplicate key errors
+          if (insertError.code !== '23505') {
+            console.error(`Error flagging job ${flag.job_id}:`, insertError)
+            stats.errors++
           }
+        } else {
+          stats.jobsFlaggedForReview++
         }
       }
     }
@@ -281,7 +277,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Allow GET for manual testing
-export async function GET(request: NextRequest) {
-  return POST(request)
-}

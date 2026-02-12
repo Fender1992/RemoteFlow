@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { parseResume, calculateParseCompleteness } from '@/lib/profile/resume-parser'
+import { extractResumeText } from '@/lib/profile/pdf-parser'
+import { safeDecrypt } from '@/lib/crypto/encrypt'
+import { rateLimit, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +15,9 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024
  * Upload and parse a resume file
  */
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = rateLimit(request, 'resume', RATE_LIMIT_PRESETS.sensitive)
+  if (rateLimitResponse) return rateLimitResponse
+
   const supabase = await createClient()
 
   const {
@@ -52,7 +58,8 @@ export async function POST(request: NextRequest) {
       )
     }
   } else {
-    apiKey = profile?.cachegpt_api_key || ''
+    const rawKey = profile?.cachegpt_api_key || ''
+    apiKey = rawKey ? safeDecrypt(rawKey) : ''
     if (!apiKey) {
       return NextResponse.json(
         {
@@ -86,30 +93,21 @@ export async function POST(request: NextRequest) {
     // Get file extension
     const ext = filename.split('.').pop()?.toLowerCase()
 
-    if (ext === 'txt') {
-      resumeText = await file.text()
-    } else if (ext === 'pdf') {
-      // For PDF files, we'd need a PDF parser library
-      // For now, return an error suggesting text paste
+    const supportedExts = ['txt', 'pdf', 'docx', 'doc']
+    if (!ext || !supportedExts.includes(ext)) {
       return NextResponse.json(
-        {
-          error: 'pdf_not_supported',
-          message: 'PDF parsing requires additional setup. Please paste your resume text directly.',
-        },
+        { error: 'Unsupported file type. Please upload a PDF, DOCX, or TXT file.' },
         { status: 400 }
       )
-    } else if (ext === 'docx' || ext === 'doc') {
-      // For DOCX files, we'd need a DOCX parser library
+    }
+
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      resumeText = await extractResumeText(buffer, filename)
+    } catch (parseErr) {
+      console.error('File parsing error:', parseErr)
       return NextResponse.json(
-        {
-          error: 'docx_not_supported',
-          message: 'DOCX parsing requires additional setup. Please paste your resume text directly.',
-        },
-        { status: 400 }
-      )
-    } else {
-      return NextResponse.json(
-        { error: 'Unsupported file type. Please upload a TXT file or paste text.' },
+        { error: 'Failed to parse file. Please try a different format or paste text directly.' },
         { status: 400 }
       )
     }
